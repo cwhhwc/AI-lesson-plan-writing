@@ -33,6 +33,13 @@
 				"navigationBarTitleText": "Markdown渲染器",
 				"navigationStyle": "custom"
 			}
+		},
+		{
+			"path": "pages/pinia-test/pinia-test",
+			"style": {
+				"navigationBarTitleText": "Pinia测试",
+				"navigationStyle": "custom"
+			}
 		}
 	],
 	"globalStyle": {

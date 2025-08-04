@@ -1,8 +1,11 @@
+<!-- 输入选项面板 -->
 <script setup>
 import { ref } from 'vue';
 import IconOption from './IconOption.vue';
-import ChatHistoryPanel from './ChatHistoryPanel.vue';
-import { usePageEvents } from '@/utils/chatOptionsPanel.js';
+import { useChatOptionsStore } from '@/utils/chatOptionsPanel.js';
+
+// 使用 Pinia Store
+const chatOptionsStore = useChatOptionsStore();
 
 // 内部管理选项配置
 const options = ref([
@@ -27,19 +30,20 @@ const options = ref([
 
 const emit = defineEmits(['option-click']);
 
-
-
 const handleOptionClick = (option, index) => {
   // 可以在这里添加内部逻辑处理
   console.log('面板内部处理:', option, index);
-  // 向外发射事件
+  
+  // 使用 Store 处理选项
+  chatOptionsStore.handleOption(option, index);
+  
+  // 向外发射事件（保持向后兼容）
   emit('option-click', option, index);
 };
-
 </script>
 
 <template>
-  <view class="input-options-panel" >
+  <view class="input-options-panel" @click="$emit('click', $event)">
     <view class="options-container" >
       <IconOption
         v-for="(option, index) in options" 

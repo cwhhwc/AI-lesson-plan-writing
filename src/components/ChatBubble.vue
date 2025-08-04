@@ -20,5 +20,12 @@
   word-break: break-all;
   box-sizing: border-box;
   margin: 12rpx 0;
+  /* 启用文本选择 */
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  /* 确保文本可以被选中 */
+  cursor: text;
 }
 </style> 

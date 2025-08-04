@@ -1,0 +1,175 @@
+<template>
+    <view class="chat-input-wrapper">
+        <view class="chat-input-bar" @click="handlePanelClick">
+            <view class="input-container">
+              <textarea 
+                class="chat-input" 
+                v-model="inputValue" 
+                placeholder="请输入消息..." 
+                :auto-height="true"
+                :show-confirm-bar="false"
+                :cursor-spacing="20"
+                :adjust-position="true"
+                :hold-keyboard="true"
+                :maxlength="1000"
+              />
+              <view class="plus-btn" @tap="toggleOptionsPanel">
+                <view class="plus-icon"></view>
+              </view>
+            </view>
+            <view class="send-btn" :class="{ 'send-btn--disabled': isSending }" @tap="handleSend">
+              <view class="send-arrow"></view>
+            </view>
+        </view>
+        
+        <!-- 输入选项面板 -->
+        <InputOptionsPanel 
+          v-show="chatOptionsStore.showOptionsPanel"
+          @option-click="handlePanelOptionClick"
+          @click="handlePanelClick"
+        />
+    </view>
+</template>
+
+<script setup>
+import { ref } from 'vue';
+import InputOptionsPanel from './InputOptionsPanel.vue';
+import { useChatOptionsStore, createChatOptionsPanel } from '@/utils/chatOptionsPanel.js';
+
+// 使用 Pinia Store
+const chatOptionsStore = useChatOptionsStore();
+
+// 本地状态
+const inputValue = ref('');
+const isSending = ref(false);
+
+// 创建选项面板管理系统
+const {
+  toggleOptionsPanel,
+  handlePanelOptionClick,
+  handlePanelClick
+} = createChatOptionsPanel();
+
+// 发送消息事件
+const emit = defineEmits(['send-message']);
+
+// 处理发送消息
+const handleSend = () => {
+  const text = inputValue.value.trim();
+  if (!text || isSending.value) return;
+  
+  emit('send-message', text);
+  inputValue.value = '';
+};
+
+// 暴露方法给父组件
+defineExpose({
+  inputValue,
+  isSending,
+  setInputValue: (value) => {
+    inputValue.value = value;
+  },
+  setIsSending: (value) => {
+    isSending.value = value;
+  }
+});
+</script>
+
+<style scoped>
+.chat-input-wrapper {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  background: #fff;
+}
+
+.chat-input-bar {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 24rpx 32rpx 24rpx;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.input-container {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.chat-input {
+  flex: 1;
+  border: 1px solid #e0e0e0;
+  border-radius: 24rpx;
+  padding: 18rpx 60rpx 18rpx 24rpx; /* 右侧留出空间给加号按钮 */
+  font-size: 30rpx;
+  outline: none;
+  background: #f7fafd;
+  min-height: 60rpx;
+  max-height: 300rpx; /* 约5行的高度 */
+  resize: none;
+  overflow-y: auto;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.plus-btn {
+  position: absolute;
+  right: 8rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.plus-icon {
+  width: 28rpx;
+  height: 28rpx;
+  background: url('data:image/svg+xml;utf8,<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 4v12M4 10h12" stroke="%23666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>') no-repeat center/contain;
+}
+
+.send-btn {
+  width: 68rpx;
+  height: 68rpx;
+  border-radius: 50%;
+  background: #e3f2fd;
+  margin-left: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
+  cursor: pointer;
+  position: relative;
+}
+.send-btn--disabled {
+  pointer-events: none;
+  cursor: not-allowed;
+}
+.send-btn--disabled::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(180, 180, 180, 0.45);
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.send-arrow {
+  width: 50rpx;
+  height: 50rpx;
+  background: url('data:image/svg+xml;utf8,<svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14" r="14" fill="none"/><path d="M8 14h12M16 10l4 4-4 4" stroke="%23339af0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>') no-repeat center/contain;
+}
+</style>
