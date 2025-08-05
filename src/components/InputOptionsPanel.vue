@@ -2,7 +2,7 @@
 <script setup>
 import { ref } from 'vue';
 import IconOption from './IconOption.vue';
-import { useChatOptionsStore } from '@/utils/chatOptionsPanel.js';
+import { useChatOptionsStore } from '@/stores/chatOptionsPanel.js';
 
 // 使用 Pinia Store
 const chatOptionsStore = useChatOptionsStore();
@@ -28,7 +28,7 @@ const options = ref([
   // }
 ]);
 
-const emit = defineEmits(['option-click']);
+const emit = defineEmits(['option-click', 'click']);
 
 const handleOptionClick = (option, index) => {
   // 可以在这里添加内部逻辑处理
@@ -40,10 +40,15 @@ const handleOptionClick = (option, index) => {
   // 向外发射事件（保持向后兼容）
   emit('option-click', option, index);
 };
+
+// 处理面板点击事件
+const handlePanelClick = (e) => {
+  emit('click', e);
+};
 </script>
 
 <template>
-  <view class="input-options-panel" @click="$emit('click', $event)">
+  <view class="input-options-panel" @click="handlePanelClick">
     <view class="options-container" >
       <IconOption
         v-for="(option, index) in options" 

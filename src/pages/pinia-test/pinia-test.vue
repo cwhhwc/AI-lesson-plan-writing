@@ -2,9 +2,16 @@
   <view class="pinia-test">
     <view class="container">
       <h2>Pinia 功能测试页面</h2>
+      <view class="explanation">
+        <text class="explanation-text">
+          这个页面演示了 Pinia 如何实现跨组件通信。组件 CounterDisplay 和 MessageList 都使用同一个 store，
+          它们之间的状态是共享的，无论在哪个组件中修改状态，其他组件都会同步更新。
+        </text>
+      </view>
       
+      <!-- 原始测试部分 -->
       <view class="test-section">
-        <h3>计数器测试</h3>
+        <h3>主控制面板</h3>
         <view class="counter-display">
           <text>计数: {{ count }}</text>
           <text>双倍计数: {{ doubleCount }}</text>
@@ -16,7 +23,7 @@
       </view>
       
       <view class="test-section">
-        <h3>消息列表测试</h3>
+        <h3>消息管理</h3>
         <view class="message-input">
           <input v-model="newMessage" placeholder="输入消息" class="input" />
           <button @click="addMessage" class="btn">添加消息</button>
@@ -28,6 +35,11 @@
         </view>
         <button @click="clearMessages" class="btn">清空消息</button>
       </view>
+      
+      <!-- 新增的展示跨组件通信的组件 -->
+      <CounterDisplay />
+      
+      <MessageList />
       
       <view class="status-section">
         <h3>状态信息</h3>
@@ -41,6 +53,8 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useTestStore } from '@/stores/test'
+import CounterDisplay from '@/components/CounterDisplay.vue'
+import MessageList from '@/components/MessageList.vue'
 
 // 使用测试 store
 const testStore = useTestStore()
@@ -82,6 +96,20 @@ const clearMessages = () => {
 
 .container {
   max-width: 100%;
+}
+
+.explanation {
+  background-color: #FFF8E1;
+  border-left: 8rpx solid #FFC107;
+  padding: 20rpx;
+  margin-bottom: 30rpx;
+  border-radius: 0 10rpx 10rpx 0;
+}
+
+.explanation-text {
+  font-size: 28rpx;
+  color: #5D4037;
+  line-height: 1.5;
 }
 
 .test-section {

@@ -1,26 +1,29 @@
 <template>
-    <view class="chat-input-wrapper">
-        <view class="chat-input-bar" @click="handlePanelClick">
-            <view class="input-container">
-              <textarea 
-                class="chat-input" 
-                v-model="inputValue" 
-                placeholder="请输入消息..." 
-                :auto-height="true"
-                :show-confirm-bar="false"
-                :cursor-spacing="20"
-                :adjust-position="true"
-                :hold-keyboard="true"
-                :maxlength="1000"
-              />
-              <view class="plus-btn" @tap="toggleOptionsPanel">
-                <view class="plus-icon"></view>
-              </view>
-            </view>
-            <view class="send-btn" :class="{ 'send-btn--disabled': isSending }" @tap="handleSend">
-              <view class="send-arrow"></view>
-            </view>
+  <view class="chat-input-wrapper">
+    <!-- 输入框 -->
+    <view class="chat-input-bar" @click="handlePanelClick">
+      <view class="input-container">
+        <textarea 
+          class="chat-input" 
+          v-model="inputValue" 
+          placeholder="请输入消息..." 
+          :auto-height="true"
+          :show-confirm-bar="false"
+          :cursor-spacing="20"
+          :adjust-position="true"
+          :hold-keyboard="true"
+          :maxlength="1000"
+         />
+        <!-- 加号按钮 -->
+        <view class="plus-btn" @tap="toggleOptionsPanel">
+          <view class="plus-icon"></view>
         </view>
+      </view>
+      <!-- 发送按钮 -->
+      <view class="send-btn" :class="{ 'send-btn--disabled': isSending }" @tap="handleSend">
+        <view class="send-arrow"></view>
+      </view>
+    </view>
         
         <!-- 输入选项面板 -->
         <InputOptionsPanel 
@@ -28,13 +31,13 @@
           @option-click="handlePanelOptionClick"
           @click="handlePanelClick"
         />
-    </view>
+  </view>
 </template>
 
 <script setup>
 import { ref } from 'vue';
 import InputOptionsPanel from './InputOptionsPanel.vue';
-import { useChatOptionsStore, createChatOptionsPanel } from '@/utils/chatOptionsPanel.js';
+import { useChatOptionsStore } from '@/stores/chatOptionsPanel.js';
 
 // 使用 Pinia Store
 const chatOptionsStore = useChatOptionsStore();
@@ -43,12 +46,25 @@ const chatOptionsStore = useChatOptionsStore();
 const inputValue = ref('');
 const isSending = ref(false);
 
-// 创建选项面板管理系统
-const {
-  toggleOptionsPanel,
-  handlePanelOptionClick,
-  handlePanelClick
-} = createChatOptionsPanel();
+// 打开选项面板
+const toggleOptionsPanel = (e) => {
+  e?.stopPropagation();
+  // 如果历史面板打开，则不允许打开选项面板
+  if (chatOptionsStore.showHistoryPanel) {
+    return;
+  }
+  chatOptionsStore.showOptionsPanel = true;
+};
+
+// 选项面板点击事件
+const handlePanelOptionClick = (option, index) => {
+  chatOptionsStore.handleOption(option, index);
+};
+
+// 防止选项面板关闭
+const handlePanelClick = (e) => {
+  e.stopPropagation();
+};
 
 // 发送消息事件
 const emit = defineEmits(['send-message']);

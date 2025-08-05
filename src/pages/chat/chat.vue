@@ -1,3 +1,4 @@
+<!-- 聊天页面 -->
 <template>
   <view class="chat-container" @click="handlePageClick">
     <!-- 消息列表区域 -->
@@ -30,6 +31,7 @@
     
     <!-- 会话列表面板 -->
     <ChatHistoryPanel 
+      :refresh-key="refreshTimestamp"
       v-show="chatOptionsStore.showHistoryPanel"
       @click="(e) => e.stopPropagation()"
       @select-chat="handleSelectChat"
@@ -45,7 +47,7 @@ import ChatHistoryPanel from '@/components/ChatHistoryPanel.vue';
 import NewChatButton from '@/components/NewChatButton.vue';
 import { chatApi } from '@/api.js';
 import { renderMarkdown } from '@/utils/renderMarkdown.js';
-import { useChatOptionsStore } from '@/utils/chatOptionsPanel.js';
+import { useChatOptionsStore } from '@/stores/chatOptionsPanel.js';
 import { createNewChat, continueChat, loadChatById } from '@/utils/chatStorageService.js';
 import ChatInput from '@/components/ChatInput.vue';
 
@@ -69,6 +71,9 @@ const messagesContainer = ref(null);
 
 // ChatInput 组件引用
 const chatInputRef = ref(null);
+
+// 会话列表面板引用
+const refreshTimestamp = ref(0);
 
 // 处理新建会话
 const handleNewChat = () => {
@@ -199,7 +204,14 @@ async function saveChatToStorage(userText, aiMessage) {
       await continueChat(sessionId.value, userText, aiMessage);
     } else {
       // 不存在，创建新对话
-      await createNewChat(sessionId.value, userText.substring(0, 20), userText, aiMessage);
+      const result = await createNewChat(sessionId.value, userText.substring(0, 20), userText, aiMessage);
+      // 只有在创建成功时才刷新会话列表
+      if (result.success) {
+        console.log('新会话创建成功，触发会话列表刷新');
+        refreshTimestamp.value = Date.now();
+      } else {
+        console.error('新会话创建失败:', result.error);
+      }
     }
   } else {
     console.log('保存失败');

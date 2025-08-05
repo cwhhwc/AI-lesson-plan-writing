@@ -29,9 +29,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import ChatHistoryItem from '@/components/ChatHistoryItem.vue';
 import { loadAllChats } from '@/utils/chatStorageService.js';
+
+// 定义props
+const props = defineProps({
+  refreshKey: {
+    type: Number,
+    default: 0
+  }
+});
 
 // 聊天记录面板组件
 const chatList = ref([]);
@@ -50,6 +58,14 @@ const loadChats = () => {
 
 // 定义emit事件
 const emit = defineEmits(['select-chat', 'close']);
+
+// 监听refreshKey变化，自动刷新会话列表
+watch(() => props.refreshKey, (newVal, oldVal) => {
+  if (newVal > oldVal) {
+    console.log('收到刷新信号，时间戳:', newVal);
+    loadChats();
+  }
+});
 
 // 处理返回按钮点击
 const handleBack = () => {
