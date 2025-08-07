@@ -119,7 +119,7 @@ onMounted(() => {
   background: #fff;
   border-radius: 24rpx 24rpx 0 0;
   box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.1);
-  z-index: 30;
+  z-index: 99;
 }
 
 .history-header {

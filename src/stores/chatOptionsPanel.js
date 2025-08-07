@@ -11,7 +11,9 @@ import { defineStore } from 'pinia';
 export const useChatOptionsStore = defineStore('chatOptions', {
   state: () => ({
     showOptionsPanel: false,
-    showHistoryPanel: false
+    showHistoryPanel: false,
+    // 新增：滚动状态管理
+    isAtBottom: true
   }),
   
   actions: {
@@ -45,6 +47,11 @@ export const useChatOptionsStore = defineStore('chatOptions', {
     // 防止历史面板关闭
     preventHistoryPanelClose(e) {
       e.stopPropagation();
+    },
+    
+    // 新增：滚动状态管理
+    setScrollPosition(isAtBottom) {
+      this.isAtBottom = isAtBottom;
     },
     
     // 选项处理

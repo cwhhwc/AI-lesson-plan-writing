@@ -71,6 +71,15 @@ export function chatApi({ message, session_id, onMessage }) {
       body: JSON.stringify(payload)
     }).then(async res => {
       if (!res.body) throw new Error('无响应体');
+      
+      // 检查响应状态码
+      if (res.status === 401) {
+        const errorData = await res.json();
+        if (errorData.message && (errorData.message === 'token无效或已过期' || errorData.message === '未提供token，禁止访问')) {
+          throw new Error('TOKEN_INVALID');
+        }
+      }
+      
       return handleStreamReceive({ response: res, onMessage });
     });
   } else {
@@ -82,6 +91,15 @@ export function chatApi({ message, session_id, onMessage }) {
         header: headers,
         data: payload,
         success(res) {
+          // 检查响应状态码和错误信息
+          if (res.statusCode === 401) {
+            const errorData = res.data;
+            if (errorData && errorData.message && (errorData.message === 'token无效或已过期' || errorData.message === '未提供token，禁止访问')) {
+              reject(new Error('TOKEN_INVALID'));
+              return;
+            }
+          }
+          
           if (onMessage) onMessage(JSON.stringify(res.data));
           resolve();
         },

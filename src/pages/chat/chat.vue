@@ -2,31 +2,18 @@
 <template>
   <view class="chat-container" @click="handlePageClick">
     <!-- 消息列表区域 -->
-    <view class="chat-messages" ref="messagesContainer">
-      <view v-for="(msg, idx) in messages" :key="idx" :class="['msg-row', msg.role === 'user' ? 'msg-user' : 'msg-ai']" :id="'msg-' + idx">
-        <ChatBubble>
-          <template v-if="msg.role === 'ai'">
-            <view class="ai-message" v-html="renderMarkdown(msg.content)"></view>
-          </template>
-          <template v-else>
-            <!-- 用户消息渲染 -->
-            <view class="user-message" v-html="formatUserMessage(msg.content)"></view>
-          </template>
-        </ChatBubble>
-      </view>
-      <!-- 滚动定位元素 -->
-      <view id="messages-bottom" style="height: 1px;"></view>
-    </view>
-    
-    <!-- 新建会话按钮 -->
-    <view class="new-chat-container">
-      <NewChatButton @click="handleNewChat" />
-    </view>
+    <ChatMessageList 
+      :messages="messages"
+      @new-chat="handleNewChat"
+      class="messages-area"
+      ref="messageListRef"
+    />
     
     <!-- 底部输入栏 -->
     <ChatInput 
       ref="chatInputRef"
       @send-message="handleSendMessage"
+      class="input-area"
     />
     
     <!-- 会话列表面板 -->
@@ -37,40 +24,45 @@
       @select-chat="handleSelectChat"
       @close="handleHistoryPanelClose"
     />
+    
+    <!-- 回到底部按钮 -->
+    <ScrollToBottom
+      v-show="!chatOptionsStore.isAtBottom"
+      class="scroll-to-bottom"
+    />
+    
+
   </view>
 </template>
 
 <script setup>
-import { ref, nextTick, watch } from 'vue';
-import ChatBubble from '@/components/ChatBubble.vue';
+import { ref, nextTick, onMounted, provide } from 'vue';
+import ChatMessageList from '@/components/ChatMessageList.vue';
 import ChatHistoryPanel from '@/components/ChatHistoryPanel.vue';
-import NewChatButton from '@/components/NewChatButton.vue';
+import ScrollToBottom from '@/components/ScrollToBottom.vue';
 import { chatApi } from '@/api.js';
-import { renderMarkdown } from '@/utils/renderMarkdown.js';
 import { useChatOptionsStore } from '@/stores/chatOptionsPanel.js';
 import { createNewChat, continueChat, loadChatById } from '@/utils/chatStorageService.js';
+import { removeToken } from '@/utils/token.js';
 import ChatInput from '@/components/ChatInput.vue';
-
-// 格式化用户消息，处理换行符
-const formatUserMessage = (content) => {
-  if (!content) return '';
-  // 将换行符转换为 <br> 标签
-  return content.replace(/\n/g, '<br>');
-};
+import { setupBottomDetection, checkScrollPosition } from '@/utils/scrollDetection.js';
 
 const messages = ref([]);
 
-// 新增 session_id 状态
+//session_id 状态
 const sessionId = ref('');
 
 // 使用 Pinia Store
 const chatOptionsStore = useChatOptionsStore();
 
-// 消息容器引用
-const messagesContainer = ref(null);
-
 // ChatInput 组件引用
 const chatInputRef = ref(null);
+
+// ChatMessageList 组件引用
+const messageListRef = ref(null);
+
+// 提供messageListRef给子组件使用
+provide('messageListRef', messageListRef);
 
 // 会话列表面板引用
 const refreshTimestamp = ref(0);
@@ -85,12 +77,15 @@ const handleNewChat = () => {
   if (chatInputRef.value) {
     chatInputRef.value.setInputValue('');
   }
-  console.log('新建会话，session_id 已清空');
+  
+  // 新建会话后检查滚动位置
+  nextTick(() => {
+    checkScrollPosition(messageListRef);
+  });
 };
 
 // 处理会话选择
 const handleSelectChat = (selectedSessionId) => {
-  console.log('chat.vue 收到会话选择:', selectedSessionId);
   sessionId.value = selectedSessionId;
   
   // 根据session_id搜索对应的聊天信息
@@ -118,17 +113,23 @@ const handleSelectChat = (selectedSessionId) => {
     // 更新界面消息列表
     messages.value = convertedMessages;
     
-    console.log('历史消息已加载到界面，消息数量:', messages.value.length);
+    // 消息加载完成后，检查滚动位置
+    nextTick(() => {
+      checkScrollPosition(messageListRef);
+    });
   } else {
-    console.log('未找到会话数据:', selectedSessionId);
     // 清空当前消息列表
     messages.value = [];
+    
+    // 清空消息后也检查滚动位置
+    nextTick(() => {
+      checkScrollPosition(messageListRef);
+    });
   }
 };
 
 // 处理发送消息
 const handleSendMessage = (text) => {
-  console.log('收到发送消息:', text);
   // 添加用户消息到列表
   messages.value.push({ role: 'user', content: text });
   // 调用AI接口
@@ -146,28 +147,7 @@ const handlePageClick = (e) => {
   chatOptionsStore.handlePageClick(e);
 };
 
-// 滚动到消息底部
-const scrollToBottom = () => {
-  nextTick(() => {
-    // 使用 uni-app 的 createSelectorQuery 滚动到底部元素
-    const query = uni.createSelectorQuery();
-    query.select('#messages-bottom').boundingClientRect((rect) => {
-      if (rect) {
-        // 滚动到指定元素
-        uni.pageScrollTo({
-          scrollTop: rect.top,
-          duration: 100
-        });
-        console.log('滚动完成');
-      }
-    }).exec();
-  });
-};
 
-// 监听消息变化，自动滚动到底部
-watch(messages, () => {
- scrollToBottom();
-}, { deep: true });
 
 // 流式消息内容累积变量
 let aiContent = '';
@@ -188,6 +168,12 @@ function handleAIMessage(chunk, msgIndex) {
       } else if (data.message) {
         messages.value[msgIndex].content = data.message;
       }
+      
+      // 检查是否为401错误
+      if (data.code === 401 && data.message && (data.message.includes('token无效') || data.message.includes('已过期'))) {
+        handleTokenInvalid();
+        return;
+      }
     } catch (e) {
       // 不是JSON，忽略
     }
@@ -207,7 +193,7 @@ async function saveChatToStorage(userText, aiMessage) {
       const result = await createNewChat(sessionId.value, userText.substring(0, 20), userText, aiMessage);
       // 只有在创建成功时才刷新会话列表
       if (result.success) {
-        console.log('新会话创建成功，触发会话列表刷新');
+
         refreshTimestamp.value = Date.now();
       } else {
         console.error('新会话创建失败:', result.error);
@@ -236,12 +222,18 @@ async function receiveAIMessage(userText) {
       session_id: sessionId.value || undefined,
       onMessage: (chunk) => handleAIMessage(chunk, aiMsgIndex)
     });
-    
+
     // AI消息接收完成后，存入缓存
     const aiMessage = messages.value[aiMsgIndex].content;
     await saveChatToStorage(userText, aiMessage);
   } catch (e) {
-    // 直接通过索引更新
+    // 检查是否为token无效错误
+    if (e.message === 'TOKEN_INVALID') {
+      handleTokenInvalid();
+      return;
+    }
+    
+    // 其他错误处理
     messages.value[aiMsgIndex].content = 'AI服务异常';
   } finally {
     // 结束，启用发送按钮
@@ -251,69 +243,56 @@ async function receiveAIMessage(userText) {
   }
 }
 
+// token失效统一处理
+function handleTokenInvalid() {
+  removeToken();
+  uni.showToast({
+    title: '登录已过期，请重新登录',
+    icon: 'none',
+    duration: 2000
+  });
+  setTimeout(() => {
+    uni.reLaunch({
+      url: '/pages/login/login'
+    });
+  }, 2000);
+}
+
+// 组件挂载后设置底部检测
+onMounted(() => {
+  nextTick(() => {
+    setupBottomDetection(messageListRef);
+    // 初始检查滚动位置
+    checkScrollPosition(messageListRef);
+  });
+});
+
 
 </script>
 
 <style scoped>
 .chat-container {
-  min-height: 90vh;
+  min-height: 85vh;
+  max-height: 95vh;
+  max-width: 100vw;
   background: #e8e8e8;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   position: relative;
 }
-.chat-messages {
+
+.messages-area {
   flex: 1;
-  overflow-y: auto;
-  padding: 32rpx 24rpx 120rpx 24rpx;
-  padding-bottom: 200rpx; /* 为底部输入框留出空间 */
+  min-height: 81vh;
+  padding-bottom: 180rpx;
 }
-.msg-row {
-  display: flex;
-  margin-bottom: 12rpx;
+
+.input-area {
+  flex-shrink: 0;
 }
-.msg-user {
-  justify-content: flex-end;
-}
-.msg-ai {
-  justify-content: flex-start;
-}
-.new-chat-container {
+
+.scroll-to-bottom {
   position: fixed;
-  left: 50%;
-  bottom: 170rpx; /* 调整位置，避免与输入框重叠 */
-  transform: translateX(-50%);
-  z-index: 10;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  padding: 0 24rpx;
+  bottom: 190rpx;
 }
-
-
-
-.user-message {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  line-height: 1.5;
-  /* 启用文本选择 */
-  user-select: text;
-  -webkit-user-select: text;
-  -moz-user-select: text;
-  -ms-user-select: text;
-  cursor: text;
-}
-
-.ai-message {
-  /* 启用文本选择 */
-  user-select: text;
-  -webkit-user-select: text;
-  -moz-user-select: text;
-  -ms-user-select: text;
-  cursor: text;
-  line-height: 1.5;
-}
-
-
 </style> 
