@@ -3,7 +3,13 @@
 
 // ==================== 存储键名常量 ====================
 export const STORAGE_KEYS = {
-  CHAT_DATA: 'chat_data_v2'         // 字典存储（O(1)查找）
+  // 将静态键改为函数形式，支持动态用户ID
+  getChatDataKey: (userId) => {
+    if (!userId || typeof userId !== 'string') {
+      throw new Error('userId不能为空且必须是字符串');
+    }
+    return `chat_data_v2_${userId}`;
+  }
 };
 
 // ==================== 数据结构模板 ====================

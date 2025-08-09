@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JWT 解码测试页面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #495057;
+            border: 2px solid #e9ecef;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+        }
+
+        .result-section {
+            margin-top: 30px;
+        }
+
+        .result-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .result-content {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+        }
+
+        .error {
+            background: #fff5f5;
+            border-left-color: #e53e3e;
+            color: #c53030;
+        }
+
+        .success {
+            background: #f0fff4;
+            border-left-color: #38a169;
+            color: #2f855a;
+        }
+
+        .sample-tokens {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .sample-tokens h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .sample-token {
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .sample-token:hover {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .copy-btn:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 JWT 解码测试</h1>
+            <p>测试 JWT Token 解码功能</p>
+        </div>
+
+        <div class="content">
+            <div class="form-group">
+                <label for="jwtToken">JWT Token:</label>
+                <textarea id="jwtToken" placeholder="请输入要解码的 JWT Token..."></textarea>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="decodePayload()">解码 Payload</button>
+                <button class="btn btn-secondary" onclick="decodeHeader()">解码 Header</button>
+                <button class="btn btn-secondary" onclick="clearAll()">清空</button>
+            </div>
+
+            <div class="result-section" id="resultSection" style="display: none;">
+                <div class="result-card" id="resultCard">
+                    <div class="result-title" id="resultTitle">解码结果</div>
+                    <div class="result-content" id="resultContent"></div>
+                </div>
+            </div>
+
+            <div class="sample-tokens">
+                <h3>示例 Token（点击复制）</h3>
+                <div class="sample-token" onclick="copyToClipboard(this)">
+                    eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+                    <button class="copy-btn">复制</button>
+                </div>
+                <div class="sample-token" onclick="copyToClipboard(this)">
+                    eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2V4YW1wbGUuY29tIiwiaWF0IjoxNjE2MjM5MDIyLCJleHAiOjE2MTYyNDI2MjJ9.invalid_signature_for_testing
+                    <button class="copy-btn">复制</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟 weapp-jwt.js 中的解码函数
+        const b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+        const b64re = /^(?:[A-Za-z\d+\/]{4})*?(?:[A-Za-z\d+\/]{2}(?:==)?|[A-Za-z\d+\/]{3}=?)?$/;
+
+        function weAtob(string) {
+            string = String(string).replace(/[\t\n\f\r ]+/g, "");
+            if (!b64re.test(string))
+                throw new TypeError("Failed to execute 'atob' on 'Window': The string to be decoded is not correctly encoded.");
+            string += "==".slice(2 - (string.length & 3));
+            var bitmap, result = "", r1, r2, i = 0;
+            for (; i < string.length;) {
+                bitmap = b64.indexOf(string.charAt(i++)) << 18 | b64.indexOf(string.charAt(i++)) << 12 |
+                    (r1 = b64.indexOf(string.charAt(i++))) << 6 | (r2 = b64.indexOf(string.charAt(i++)));
+                result += r1 === 64 ? String.fromCharCode(bitmap >> 16 & 255) :
+                    r2 === 64 ? String.fromCharCode(bitmap >> 16 & 255, bitmap >> 8 & 255) :
+                        String.fromCharCode(bitmap >> 16 & 255, bitmap >> 8 & 255, bitmap & 255);
+            }
+            return result;
+        }
+
+        function b64DecodeUnicode(str) {
+            return decodeURIComponent(weAtob(str).replace(/(.)/g, function (p) {
+                var code = p.charCodeAt(0).toString(16).toUpperCase();
+                if (code.length < 2) {
+                    code = "0" + code;
+                }
+                return "%" + code;
+            }));
+        }
+
+        function base64_url_decode(str) {
+            var output = str.replace(/-/g, "+").replace(/_/g, "/");
+            switch (output.length % 4) {
+                case 0:
+                    break;
+                case 2:
+                    output += "==";
+                    break;
+                case 3:
+                    output += "=";
+                    break;
+                default:
+                    throw "Illegal base64url string!";
+            }
+            try {
+                return b64DecodeUnicode(output);
+            }
+            catch (err) {
+                return weAtob(output);
+            }
+        }
+
+        function weappJwtDecode(token, options) {
+            if (typeof token !== "string") {
+                throw ("Invalid token specified");
+            }
+            options = options || {};
+            var pos = options.header === true ? 0 : 1;
+            try {
+                return JSON.parse(base64_url_decode(token.split(".")[pos]));
+            }
+            catch (e) {
+                throw ("Invalid token specified: " + e.message);
+            }
+        }
+
+        function decodePayload() {
+            const token = document.getElementById('jwtToken').value.trim();
+            if (!token) {
+                showError('请输入 JWT Token');
+                return;
+            }
+
+            try {
+                const payload = weappJwtDecode(token, { header: false });
+                showResult('Payload 解码结果', JSON.stringify(payload, null, 2), 'success');
+            } catch (error) {
+                showError('解码失败: ' + error.message);
+            }
+        }
+
+        function decodeHeader() {
+            const token = document.getElementById('jwtToken').value.trim();
+            if (!token) {
+                showError('请输入 JWT Token');
+                return;
+            }
+
+            try {
+                const header = weappJwtDecode(token, { header: true });
+                showResult('Header 解码结果', JSON.stringify(header, null, 2), 'success');
+            } catch (error) {
+                showError('解码失败: ' + error.message);
+            }
+        }
+
+        function showResult(title, content, type = 'success') {
+            const resultSection = document.getElementById('resultSection');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultContent = document.getElementById('resultContent');
+            const resultCard = document.getElementById('resultCard');
+
+            resultTitle.textContent = title;
+            resultContent.textContent = content;
+            
+            resultCard.className = 'result-card ' + type;
+            resultSection.style.display = 'block';
+        }
+
+        function showError(message) {
+            showResult('错误', message, 'error');
+        }
+
+        function clearAll() {
+            document.getElementById('jwtToken').value = '';
+            document.getElementById('resultSection').style.display = 'none';
+        }
+
+        function copyToClipboard(element) {
+            const text = element.textContent.replace('复制', '').trim();
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = element.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '已复制!';
+                btn.style.background = '#28a745';
+                
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '#28a745';
+                }, 2000);
+            }).catch(err => {
+                console.error('复制失败:', err);
+                alert('复制失败，请手动复制');
+            });
+        }
+
+        // 添加回车键支持
+        document.getElementById('jwtToken').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                decodePayload();
+            }
+        });
+    </script>
+</body>
+</html>

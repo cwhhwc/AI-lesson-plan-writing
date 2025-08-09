@@ -6,8 +6,10 @@ import {
   createChatTemplate, 
   createMessageTemplate, 
   createChatDataTemplate,
-  STORAGE_KEYS 
+  STORAGE_KEYS
 } from './chatStorage.js';
+import { getToken } from './token.js';
+import weappJwt from './weapp-jwt.js';
 
 // ==================== 队列化异步存储（确保消息不丢失）====================
 class ChatStorageQueue {
@@ -71,13 +73,104 @@ export class ChatStorageService {
     this.queue = new ChatStorageQueue();
   }
 
+
+
+  /**
+   * 从JWT token中获取用户ID
+   * @returns {string|null} 用户ID，如果获取失败返回null
+   * @private
+   */
+  _getUserIdFromToken() {
+    try {
+      const token = getToken();
+      if (!token) {
+        console.warn('未找到token');
+        return null;
+      }
+      
+      // 解码JWT token获取payload
+      const payload = weappJwt(token);
+      
+      // 从payload中获取用户ID（根据后端JWT结构可能需要调整字段名）
+      const userId = payload.userId;
+      
+      if (!userId) {
+        console.warn('JWT token中未找到用户ID');
+        return null;
+      }
+      
+      return String(userId);
+    } catch (error) {
+      console.error('解析JWT token失败:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 参数验证工具函数
+   * @param {Object} params 参数对象
+   * @param {string} params.userId 用户ID
+   * @param {string} params.sessionId 会话ID（可选）
+   * @param {string} params.chatName 会话名称（可选）
+   * @param {string} params.userMessage 用户消息（可选）
+   * @param {string} params.aiMessage AI回复（可选）
+   * @param {string} params.newName 新名称（可选）
+   * @returns {{valid: boolean, error?: string}} 验证结果
+   * @private
+   */
+  _validateParams(params) {
+    const { userId, sessionId, chatName, userMessage, aiMessage, newName } = params;
+    
+    // 验证userId（必需）
+    if (!userId || typeof userId !== 'string') {
+      return { valid: false, error: 'userId不能为空且必须是字符串' };
+    }
+    
+    // 验证sessionId（如果提供）
+    if (sessionId !== undefined && (!sessionId || typeof sessionId !== 'string')) {
+      return { valid: false, error: 'sessionId不能为空且必须是字符串' };
+    }
+    
+    // 验证chatName（如果提供）
+    if (chatName !== undefined && (!chatName || typeof chatName !== 'string')) {
+      return { valid: false, error: 'chatName不能为空且必须是字符串' };
+    }
+    
+    // 验证userMessage（如果提供）
+    if (userMessage !== undefined && (!userMessage || typeof userMessage !== 'string')) {
+      return { valid: false, error: 'userMessage不能为空且必须是字符串' };
+    }
+    
+    // 验证aiMessage（如果提供）
+    if (aiMessage !== undefined && (!aiMessage || typeof aiMessage !== 'string')) {
+      return { valid: false, error: 'aiMessage不能为空且必须是字符串' };
+    }
+    
+    // 验证newName（如果提供）
+    if (newName !== undefined && (!newName || typeof newName !== 'string')) {
+      return { valid: false, error: 'newName不能为空且必须是字符串' };
+    }
+    
+    return { valid: true };
+  }
+
   /**
    * 获取字典式存储数据
+   * @param {string} userId 用户ID
    * @returns {Object} 字典式存储结构
    * @private
    */
-  _getChatData() {
-    let chatData = getStorage(STORAGE_KEYS.CHAT_DATA, null);
+  _getChatData(userId) {
+    // 参数验证
+    const validation = this._validateParams({ userId });
+    if (!validation.valid) {
+      throw new Error(validation.error);
+    }
+    
+    // 生成用户特定的存储键
+    const storageKey = STORAGE_KEYS.getChatDataKey(userId);
+    
+    let chatData = getStorage(storageKey, null);
     
     if (chatData && chatData.chats && chatData.order && chatData.meta) {
       return chatData;
@@ -85,7 +178,7 @@ export class ChatStorageService {
     
     // 创建新的空字典结构
     chatData = createChatDataTemplate();
-    setStorage(STORAGE_KEYS.CHAT_DATA, chatData);
+    setStorage(storageKey, chatData);
     
     return chatData;
   }
@@ -93,38 +186,49 @@ export class ChatStorageService {
   /**
    * 保存字典式存储数据
    * @param {Object} chatData 字典式存储结构
+   * @param {string} userId 用户ID
    * @private
    */
-  _saveChatData(chatData) {
+  _saveChatData(chatData, userId) {
+    // 参数验证
+    const validation = this._validateParams({ userId });
+    if (!validation.valid) {
+      throw new Error(validation.error);
+    }
+    
+    // 生成用户特定的存储键
+    const storageKey = STORAGE_KEYS.getChatDataKey(userId);
+      
     // 更新元数据
     chatData.meta.lastUpdated = Date.now();
     chatData.meta.totalCount = chatData.order.length;
     
+
+    
     // 保存数据
-    setStorage(STORAGE_KEYS.CHAT_DATA, chatData);
+    setStorage(storageKey, chatData);
   }
 
   /**
    * 创建新会话
+   * @param {string} userId 用户ID
    * @param {string} sessionId 后端返回的session_id
    * @param {string} chatName 会话名称
    * @param {string} userMessage 用户消息
    * @param {string} aiMessage AI回复
    * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
    */
-  async createNewChat(sessionId, chatName, userMessage, aiMessage) {
+  async createNewChat(userId, sessionId, chatName, userMessage, aiMessage) {
     // 参数验证
-    if (!sessionId || typeof sessionId !== 'string') {
-      return { success: false, error: 'sessionId不能为空且必须是字符串' };
-    }
-    if (!userMessage || !aiMessage) {
-      return { success: false, error: '用户消息和AI回复不能为空' };
+    const validation = this._validateParams({ userId, sessionId, userMessage, aiMessage });
+    if (!validation.valid) {
+      return { success: false, error: validation.error };
     }
 
     try {
       const newChat = await this.queue.addToQueue(() => {
         // 1. 获取字典存储数据
-        const chatData = this._getChatData();
+        const chatData = this._getChatData(userId);
         
         // 2. 检查会话是否已存在 - O(1)查找
         if (chatData.chats[sessionId]) {
@@ -144,7 +248,7 @@ export class ChatStorageService {
         chatData.order.unshift(sessionId); // 新会话放在最前面
         
         // 6. 保存更新后的数据
-        this._saveChatData(chatData);
+        this._saveChatData(chatData, userId);
         
         console.log('新会话创建成功:', sessionId);
         return chat;
@@ -160,24 +264,23 @@ export class ChatStorageService {
 
   /**
    * 继续现有会话（添加新消息）
+   * @param {string} userId 用户ID
    * @param {string} sessionId 会话ID
    * @param {string} userMessage 用户消息
    * @param {string} aiMessage AI回复
    * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
    */
-  async continueChat(sessionId, userMessage, aiMessage) {
+  async continueChat(userId, sessionId, userMessage, aiMessage) {
     // 参数验证
-    if (!sessionId || typeof sessionId !== 'string') {
-      return { success: false, error: 'sessionId不能为空且必须是字符串' };
-    }
-    if (!userMessage || !aiMessage) {
-      return { success: false, error: '用户消息和AI回复不能为空' };
+    const validation = this._validateParams({ userId, sessionId, userMessage, aiMessage });
+    if (!validation.valid) {
+      return { success: false, error: validation.error };
     }
 
     try {
       const result = await this.queue.addToQueue(() => {
         // 1. 获取字典存储数据
-        const chatData = this._getChatData();
+        const chatData = this._getChatData(userId);
         
         // 2. 直接查找目标会话 - O(1)查找
         const targetChat = chatData.chats[sessionId];
@@ -200,7 +303,7 @@ export class ChatStorageService {
         }
         
         // 6. 保存更新后的数据
-        this._saveChatData(chatData);
+        this._saveChatData(chatData, userId);
         
         console.log('消息添加成功:', sessionId, '消息数:', targetChat.messages.length);
         return targetChat;
@@ -216,19 +319,21 @@ export class ChatStorageService {
 
   /**
    * 删除会话
+   * @param {string} userId 用户ID
    * @param {string} sessionId 会话ID
    * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
    */
-  async deleteChat(sessionId) {
+  async deleteChat(userId, sessionId) {
     // 参数验证
-    if (!sessionId || typeof sessionId !== 'string') {
-      return { success: false, error: 'sessionId不能为空且必须是字符串' };
+    const validation = this._validateParams({ userId, sessionId });
+    if (!validation.valid) {
+      return { success: false, error: validation.error };
     }
 
     try {
       const result = await this.queue.addToQueue(() => {
         // 1. 获取字典存储数据
-        const chatData = this._getChatData();
+        const chatData = this._getChatData(userId);
         
         // 2. 检查会话是否存在 - O(1)查找
         if (!chatData.chats[sessionId]) {
@@ -245,7 +350,7 @@ export class ChatStorageService {
         }
         
         // 5. 保存更新后的数据
-        this._saveChatData(chatData);
+        this._saveChatData(chatData, userId);
         
         console.log('会话删除成功:', sessionId);
         
@@ -266,12 +371,20 @@ export class ChatStorageService {
 
   /**
    * 读取所有会话（按order顺序返回）
+   * @param {string} userId 用户ID
    * @returns {Array} 会话列表
    */
-  loadAllChats() {
+  loadAllChats(userId) {
+    // 参数验证
+    const validation = this._validateParams({ userId });
+    if (!validation.valid) {
+      console.warn(validation.error);
+      return [];
+    }
+    
     try {
       // 1. 获取字典存储数据
-      const chatData = this._getChatData();
+      const chatData = this._getChatData(userId);
       
       // 2. 按order顺序构建会话列表
       const allChats = chatData.order
@@ -287,19 +400,21 @@ export class ChatStorageService {
 
   /**
    * 根据ID读取特定会话
+   * @param {string} userId 用户ID
    * @param {string} sessionId 会话ID
    * @returns {Object|null} 会话对象，未找到返回null
    */
-  loadChatById(sessionId) {
+  loadChatById(userId, sessionId) {
     // 参数验证
-    if (!sessionId || typeof sessionId !== 'string') {
-      console.warn('sessionId不能为空且必须是字符串');
+    const validation = this._validateParams({ userId, sessionId });
+    if (!validation.valid) {
+      console.warn(validation.error);
       return null;
     }
 
     try {
       // 1. 获取字典存储数据
-      const chatData = this._getChatData();
+      const chatData = this._getChatData(userId);
       
       // 2. 直接从字典查找 - O(1)查找
       const targetChat = chatData.chats[sessionId];
@@ -319,23 +434,22 @@ export class ChatStorageService {
 
   /**
    * 更新会话名称
+   * @param {string} userId 用户ID
    * @param {string} sessionId 会话ID
    * @param {string} newName 新的会话名称
    * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
    */
-  async updateChatName(sessionId, newName) {
+  async updateChatName(userId, sessionId, newName) {
     // 参数验证
-    if (!sessionId || typeof sessionId !== 'string') {
-      return { success: false, error: 'sessionId不能为空且必须是字符串' };
-    }
-    if (!newName || typeof newName !== 'string') {
-      return { success: false, error: '新名称不能为空且必须是字符串' };
+    const validation = this._validateParams({ userId, sessionId, newName });
+    if (!validation.valid) {
+      return { success: false, error: validation.error };
     }
 
     try {
       const result = await this.queue.addToQueue(() => {
         // 1. 获取字典存储数据
-        const chatData = this._getChatData();
+        const chatData = this._getChatData(userId);
         
         // 2. 直接查找目标会话 - O(1)查找
         const targetChat = chatData.chats[sessionId];
@@ -348,7 +462,7 @@ export class ChatStorageService {
         targetChat.name = newName;
         
         // 4. 保存更新后的数据
-        this._saveChatData(chatData);
+        this._saveChatData(chatData, userId);
         
         console.log('会话名称更新成功:', sessionId, '->', newName);
         return targetChat;
@@ -372,16 +486,26 @@ export class ChatStorageService {
 
   /**
    * 清空所有会话（谨慎使用）
+   * @param {string} userId 用户ID
    * @returns {Promise<{success: boolean, error?: string}>}
    */
-  async clearAllChats() {
+  async clearAllChats(userId) {
+    // 参数验证
+    const validation = this._validateParams({ userId });
+    if (!validation.valid) {
+      return { success: false, error: validation.error };
+    }
+    
     try {
       const result = await this.queue.addToQueue(() => {
         // 创建空的字典存储结构
         const emptyChatData = createChatDataTemplate();
         
+        // 生成用户特定的存储键
+        const storageKey = STORAGE_KEYS.getChatDataKey(userId);
+        
         // 保存空数据
-        setStorage(STORAGE_KEYS.CHAT_DATA, emptyChatData);
+        setStorage(storageKey, emptyChatData);
         
         console.log('所有会话已清空');
         return { cleared: true };
@@ -396,71 +520,13 @@ export class ChatStorageService {
   }
 }
 
-// ==================== 便利的单例服务实例 ====================
+// ==================== 默认导出单例服务实例 ====================
 
 // 创建全局单例服务实例
-export const chatStorageAPI = new ChatStorageService();
+const chatStorageAPI = new ChatStorageService();
 
-// ==================== 兼容性函数导出 ====================
-
-/**
- * 创建新会话 - 便利函数
- * @param {string} sessionId 后端返回的session_id
- * @param {string} chatName 会话名称  
- * @param {string} userMessage 用户消息
- * @param {string} aiMessage AI回复
- * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
- */
-export async function createNewChat(sessionId, chatName, userMessage, aiMessage) {
-  return chatStorageAPI.createNewChat(sessionId, chatName, userMessage, aiMessage);
-}
-
-/**
- * 继续现有会话 - 便利函数
- * @param {string} sessionId 会话ID
- * @param {string} userMessage 用户消息
- * @param {string} aiMessage AI回复
- * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
- */
-export async function continueChat(sessionId, userMessage, aiMessage) {
-  return chatStorageAPI.continueChat(sessionId, userMessage, aiMessage);
-}
-
-/**
- * 删除会话 - 便利函数
- * @param {string} sessionId 会话ID
- * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
- */
-export async function deleteChat(sessionId) {
-  return chatStorageAPI.deleteChat(sessionId);
-}
-
-/**
- * 读取所有会话 - 便利函数
- * @returns {Array} 会话列表
- */
-export function loadAllChats() {
-  return chatStorageAPI.loadAllChats();
-}
-
-/**
- * 根据ID读取特定会话 - 便利函数
- * @param {string} sessionId 会话ID
- * @returns {Object|null} 会话对象
- */
-export function loadChatById(sessionId) {
-  return chatStorageAPI.loadChatById(sessionId);
-}
-
-/**
- * 更新会话名称 - 便利函数
- * @param {string} sessionId 会话ID
- * @param {string} newName 新的会话名称
- * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
- */
-export async function updateChatName(sessionId, newName) {
-  return chatStorageAPI.updateChatName(sessionId, newName);
-}
+// 默认导出单例实例
+export default chatStorageAPI;
 
 // ==================== 使用示例和API文档 ====================
 
@@ -475,26 +541,26 @@ export async function updateChatName(sessionId, newName) {
  * 
  * 📖 使用方式：
  * 
- * 1. 方式一：使用服务类实例
- *    import { chatStorageAPI } from '@/utils/chatStorageAPI.js'
- *    const result = await chatStorageAPI.createNewChat(sessionId, name, userMsg, aiMsg)
- * 
- * 2. 方式二：使用便利函数
- *    import { createNewChat, continueChat } from '@/utils/chatStorageAPI.js'
- *    const result = await createNewChat(sessionId, name, userMsg, aiMsg)
+ * 导入默认单例实例：
+ *    import chatStorageAPI from '@/utils/chatStorageService.js'
+ *    const result = await chatStorageAPI.createNewChat(userId, sessionId, name, userMsg, aiMsg)
  * 
  * 🔄 典型的聊天流程：
  * 
  * ```javascript
  * // 在 chat.vue 中
- * import { chatStorageAPI } from '@/utils/chatStorageAPI.js'
+ * import chatStorageAPI from '@/utils/chatStorageService.js'
+ * 
+ * // 获取当前用户ID（从JWT token中）
+ * const userId = chatStorageAPI._getUserIdFromToken()
  * 
  * // 用户发送消息，AI回复成功后
  * async handleAIResponse(userMessage, aiResponse) {
- *   if (aiResponse.session_id) {
+ *   if (aiResponse.session_id && userId) {
  *     if (this.currentSessionId) {
  *       // 继续现有会话
  *       const result = await chatStorageAPI.continueChat(
+ *         userId,
  *         this.currentSessionId, 
  *         userMessage, 
  *         aiResponse.message
@@ -505,6 +571,7 @@ export async function updateChatName(sessionId, newName) {
  *     } else {
  *       // 创建新会话
  *       const result = await chatStorageAPI.createNewChat(
+ *         userId,
  *         aiResponse.session_id,
  *         '新对话',
  *         userMessage,
@@ -520,16 +587,22 @@ export async function updateChatName(sessionId, newName) {
  * 
  * // 页面加载时读取历史会话
  * mounted() {
- *   this.chatList = chatStorageAPI.loadAllChats()
+ *   const userId = chatStorageAPI._getUserIdFromToken()
+ *   if (userId) {
+ *     this.chatList = chatStorageAPI.loadAllChats(userId)
+ *   }
  * }
  * 
  * // 点击历史会话
  * loadHistoryChat(sessionId) {
- *   const chat = chatStorageAPI.loadChatById(sessionId)
- *   if (chat) {
- *     this.currentChat = chat
- *     this.messages = chat.messages
- *     this.currentSessionId = sessionId
+ *   const userId = chatStorageAPI._getUserIdFromToken()
+ *   if (userId) {
+ *     const chat = chatStorageAPI.loadChatById(userId, sessionId)
+ *     if (chat) {
+ *       this.currentChat = chat
+ *       this.messages = chat.messages
+ *       this.currentSessionId = sessionId
+ *     }
  *   }
  * }
  * ```
@@ -539,4 +612,6 @@ export async function updateChatName(sessionId, newName) {
  * - 读取操作是同步的，可以直接调用
  * - 返回格式统一为 {success: boolean, data?: Object, error?: string}
  * - sessionId 必须是后端返回的有效字符串
+ * - userId 是必需的参数，用于数据隔离
+ * - 可以使用 _getUserIdFromToken() 方法从JWT token中获取用户ID
  */

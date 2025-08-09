@@ -14,9 +14,20 @@
       </view>
     </view>
     <view class="history-list">
-      <!-- 会话列表将在这里渲染 -->
+      <!-- 加载状态 -->
+      <view v-if="chatHistoryStore.getIsLoading" class="loading-state">
+        <text>加载中...</text>
+      </view>
+      
+      <!-- 空状态 -->
+      <view v-else-if="!chatHistoryStore.hasChats" class="empty-state">
+        <text>暂无会话记录</text>
+      </view>
+      
+      <!-- 会话列表 -->
       <ChatHistoryItem 
-        v-for="chat in chatList" 
+        v-else
+        v-for="chat in chatHistoryStore.getChatList" 
         :key="chat.id"
         :title="chat.name"
         :session-id="chat.id"
@@ -29,83 +40,50 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { onMounted } from 'vue';
 import ChatHistoryItem from '@/components/ChatHistoryItem.vue';
-import { loadAllChats } from '@/utils/chatStorageService.js';
+import { useChatHistoryStore } from '@/stores/chatHistory.js';
 
-// 定义props
-const props = defineProps({
-  refreshKey: {
-    type: Number,
-    default: 0
-  }
-});
-
-// 聊天记录面板组件
-const chatList = ref([]);
-
-// 加载所有会话
-const loadChats = () => {
-  try {
-    const chats = loadAllChats();
-    chatList.value = chats;
-    console.log('加载会话列表成功:', chats.length, '个会话');
-  } catch (error) {
-    console.error('加载会话列表失败:', error);
-    chatList.value = [];
-  }
-};
+// 使用聊天历史store
+const chatHistoryStore = useChatHistoryStore();
 
 // 定义emit事件
 const emit = defineEmits(['select-chat', 'close']);
 
-// 监听refreshKey变化，自动刷新会话列表
-watch(() => props.refreshKey, (newVal, oldVal) => {
-  if (newVal > oldVal) {
-    console.log('收到刷新信号，时间戳:', newVal);
-    loadChats();
-  }
-});
-
 // 处理返回按钮点击
 const handleBack = () => {
-  console.log('返回按钮被点击');
   emit('close');
 };
 
 // 处理会话选择
 const handleSelectChat = (sessionId) => {
-  console.log('ChatHistoryPanel 收到会话选择:', sessionId);
+  chatHistoryStore.selectChat(sessionId);
   emit('select-chat', sessionId);
 };
 
 // 处理会话重命名
 const handleChatRenamed = (renameData) => {
-  console.log('ChatHistoryPanel 收到会话重命名:', renameData);
-  
-  // 更新本地会话列表中的会话名称
-  const chatIndex = chatList.value.findIndex(chat => chat.id === renameData.sessionId);
+  // 更新store中的会话列表
+  const chatList = chatHistoryStore.getChatList;
+  const chatIndex = chatList.findIndex(chat => chat.id === renameData.sessionId);
   if (chatIndex !== -1) {
-    chatList.value[chatIndex].name = renameData.newName;
-    console.log('会话列表已更新:', renameData.sessionId, '->', renameData.newName);
+    const updatedChatList = [...chatList];
+    updatedChatList[chatIndex].name = renameData.newName;
+    chatHistoryStore.setChatList(updatedChatList);
   }
 };
 
 // 处理会话删除
 const handleChatDeleted = (deleteData) => {
-  console.log('ChatHistoryPanel 收到会话删除:', deleteData);
-  
-  // 从本地会话列表中移除被删除的会话
-  const chatIndex = chatList.value.findIndex(chat => chat.id === deleteData.sessionId);
-  if (chatIndex !== -1) {
-    chatList.value.splice(chatIndex, 1);
-    console.log('会话已从列表中移除:', deleteData.sessionId);
-  }
+  // 从store中的会话列表移除被删除的会话
+  const chatList = chatHistoryStore.getChatList;
+  const updatedChatList = chatList.filter(chat => chat.id !== deleteData.sessionId);
+  chatHistoryStore.setChatList(updatedChatList);
 };
 
-// 组件挂载时加载会话
+// 组件挂载时初始化会话列表
 onMounted(() => {
-  loadChats();
+  chatHistoryStore.initializeChatList();
 });
 </script>
 
@@ -165,5 +143,15 @@ onMounted(() => {
   padding: 24rpx;
   overflow-y: auto;
   max-height: calc(50vh - 120rpx); /* 减去header的高度 */
+}
+
+.loading-state,
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200rpx;
+  color: #999;
+  font-size: 28rpx;
 }
 </style> 

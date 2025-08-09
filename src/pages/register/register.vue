@@ -42,7 +42,7 @@
           <checkbox v-model="agree" style="transform:scale(0.8);margin-right:2px;"/>
           我已阅读并同意<text style="color:#3b82f6;text-decoration:underline;">用户协议</text>和<text style="color:#3b82f6;text-decoration:underline;">隐私政策</text>
         </view>
-        <BaseButton @click="onRegister">注册</BaseButton>
+        <BaseButton @click="onRegister" :loading="isLoading">注册</BaseButton>
         <view style="text-align:center; margin-top:32rpx; color:#222; font-size:28rpx;">
           已有账号？<text style="color:#222; text-decoration:underline; margin-left:8rpx; cursor:pointer;" @tap="onLogin">返回登录</text>
         </view>
@@ -67,12 +67,18 @@ const passwordError = ref(false);
 const passwordLengthError = ref(false);
 const confirmPasswordError = ref(false);
 const usernameErrorMsg = ref('');
+// 添加加载状态防止重复提交
+const isLoading = ref(false);
 function onRegister() {
+  // 防止重复提交
+  if (isLoading.value) return;
+  
   usernameError.value = !username.value.trim();
   passwordError.value = !password.value.trim();
   passwordLengthError.value = false;
   confirmPasswordError.value = false;
   usernameErrorMsg.value = '';
+  
   if (usernameError.value) return;
   if (passwordError.value) return;
   if (password.value.length < 6 || password.value.length > 18) {
@@ -83,6 +89,10 @@ function onRegister() {
     confirmPasswordError.value = true;
     return;
   }
+  
+  // 设置加载状态
+  isLoading.value = true;
+  
   // 注册接口调用
   registerApi({
     username: username.value,
@@ -102,6 +112,10 @@ function onRegister() {
     })
     .catch(() => {
       uni.showToast({ title: '网络错误', icon: 'none' });
+    })
+    .finally(() => {
+      // 无论成功失败都要重置加载状态
+      isLoading.value = false;
     });
 }
 function onUsernameInput(e) {

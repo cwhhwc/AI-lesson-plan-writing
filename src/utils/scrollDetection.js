@@ -79,6 +79,6 @@ export const scrollToBottom = (messageListRef) => {
     // 滚动完成后更新状态
     setTimeout(() => {
       updateScrollState(scrollableElement);
-    }, 300); // 等待滚动动画完成
+    }, 200); // 等待滚动动画完成
   }
 };

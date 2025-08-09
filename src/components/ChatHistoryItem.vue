@@ -53,7 +53,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { updateChatName, deleteChat } from '@/utils/chatStorageService.js';
+import chatStorageAPI from '@/utils/chatStorageService.js';
 
 // 定义props
 const props = defineProps({
@@ -106,11 +106,21 @@ const handleConfirmRename = async () => {
   }
 
   try {
+    // 获取当前用户ID
+    const userId = chatStorageAPI._getUserIdFromToken();
+    if (!userId) {
+      uni.showToast({
+        title: '用户未登录',
+        icon: 'none'
+      });
+      return;
+    }
+
     // 保存新名称，避免在清空editingTitle后丢失
     const newName = editingTitle.value.trim();
     
     // 调用API更新数据库中的会话名称
-    const result = await updateChatName(props.sessionId, newName);
+    const result = await chatStorageAPI.updateChatName(userId, props.sessionId, newName);
     
     if (result.success) {
       // 更新成功，退出重命名模式
@@ -174,8 +184,18 @@ const handleDelete = () => {
 
 const handleConfirmDelete = async () => {
   try {
+    // 获取当前用户ID
+    const userId = chatStorageAPI._getUserIdFromToken();
+    if (!userId) {
+      uni.showToast({
+        title: '用户未登录',
+        icon: 'none'
+      });
+      return;
+    }
+
     // 调用API删除会话
-    const result = await deleteChat(props.sessionId);
+    const result = await chatStorageAPI.deleteChat(userId, props.sessionId);
     
     if (result.success) {
       // 删除成功，退出删除模式

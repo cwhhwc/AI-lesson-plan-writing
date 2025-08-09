@@ -32,7 +32,7 @@
           </label>
           <text class="forgot-password" @tap="onForgot">忘记密码？</text>
         </view>
-        <BaseButton @click="onLogin">登录</BaseButton>
+        <BaseButton @click="onLogin" :loading="isLoading">登录</BaseButton>
         <view class="register-link">
           还没有账号？<text class="register-action" @tap="onRegister">立即注册</text>
         </view>
@@ -54,9 +54,14 @@ const rememberMe = ref(false);
 const usernameError = ref(false);
 const passwordError = ref(false);
 const usernameErrorMsg = ref('');
+// 添加加载状态防止重复提交
+const isLoading = ref(false);
 
 
 function onLogin() {
+  // 防止重复提交
+  if (isLoading.value) return;
+  
   usernameError.value = !username.value.trim();
   passwordError.value = !password.value.trim();
   // 清空后端返回的账号错误提示
@@ -64,6 +69,10 @@ function onLogin() {
   if (usernameError.value || passwordError.value) {
     return;
   }
+  
+  // 设置加载状态
+  isLoading.value = true;
+  
   // 登录接口对接
   loginApi({
     username: username.value,
@@ -75,7 +84,7 @@ function onLogin() {
         uni.showToast({ title: '登录成功', icon: 'success' });
         setToken(data.token);
         uni.navigateTo({ url: '/pages/chat/chat' });
-        // TODO: 登录成功后的后续逻辑
+        // 如有需要，可以在这里添加登录成功后的后续逻辑
       } else {
         // 如果后端返回用户名或密码错误，将message显示在账号输入框下方
         if (data.message) {
@@ -87,6 +96,11 @@ function onLogin() {
     })
     .catch(() => {
       uni.showToast({ title: '网络错误', icon: 'none' });
+      console.log('网络错误');
+    })
+    .finally(() => {
+      // 无论成功失败都要重置加载状态
+      isLoading.value = false;
     });
 }
 //判断输入框是否为空
