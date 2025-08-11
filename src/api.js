@@ -21,10 +21,11 @@ export function registerApi({ username, password, confirmPwd }) {
 export function chatApi({ message, session_id, onMessage }) {
   const payload = { message };
   if (session_id) payload.session_id = session_id;
-
   return request({
     url: API_CONFIG.ENDPOINTS.CHAT,
     data: payload,
-    onMessage
+    onMessage: (chunk) => {
+      onMessage(chunk);
+    }
   });
 } 

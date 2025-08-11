@@ -4,6 +4,7 @@ import chatStorageAPI from '@/utils/chatStorageService.js';
 import { removeToken } from '@/utils/token.js';
 import { useChatHistoryStore } from '@/stores/chatHistory.js';
 
+
 /**
  * 聊天功能 Composable
  * @param {Object} options - 配置选项
@@ -127,6 +128,7 @@ export function useChat(options = {}) {
    * @param {number} msgIndex - 消息索引
    */
   const handleAIMessage = (chunk, msgIndex) => {
+    console.log('断点1.1：handleAIMessage', chunk, msgIndex);
     const lines = chunk.split(/\r?\n/).filter(Boolean);
     for (const line of lines) {
       try {
@@ -202,14 +204,17 @@ export function useChat(options = {}) {
     if (chatInputRef) {
       chatInputRef.setIsSending(true);
     }
-    
+
     try {
+      console.log('断点1.2：receiveAIMessage', userText, sessionId.value);
       await chatApi({
         message: userText,
         session_id: sessionId.value || undefined,
-        onMessage: (chunk) => handleAIMessage(chunk, aiMsgIndex)
+        onMessage: (chunk) => {
+          console.log('断点1.3：onMessage', chunk);
+          handleAIMessage(chunk, aiMsgIndex)
+        }
       });
-
       // AI消息接收完成后，存入缓存
       const aiMessage = messages.value[aiMsgIndex].content;
       await saveChatToStorage(userText, aiMessage);
@@ -219,7 +224,7 @@ export function useChat(options = {}) {
         handleTokenInvalid();
         return;
       }
-      
+      console.error(e);
       // 其他错误处理
       messages.value[aiMsgIndex].content = 'AI服务异常';
     } finally {

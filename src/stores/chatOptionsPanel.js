@@ -4,6 +4,7 @@
  */
 
 import { defineStore } from 'pinia';
+import { updateNavigationTitle } from '@/utils/titleManager.js';
 
 /**
  * Pinia Store - 聊天选项面板状态管理
@@ -13,7 +14,9 @@ export const useChatOptionsStore = defineStore('chatOptions', {
     showOptionsPanel: false,
     showHistoryPanel: false,
     // 新增：滚动状态管理
-    isAtBottom: true
+    isAtBottom: true,
+    // 模式控制变量
+    isWriteMode: false
   }),
   
   actions: {
@@ -54,19 +57,42 @@ export const useChatOptionsStore = defineStore('chatOptions', {
       this.isAtBottom = isAtBottom;
     },
     
+    // 更新导航栏标题
+    updateTitle() {
+      const modeConfig = {
+        isWriteMode: '写教案模式'
+        // 未来添加新模式: isAnalyzeMode: '分析模式'
+      };
+      const currentState = {
+        isWriteMode: this.isWriteMode
+        // 未来添加新模式: isAnalyzeMode: this.isAnalyzeMode
+      };
+      updateNavigationTitle(modeConfig, currentState);
+    },
+    
+    // 设置模式 (确保只有一个为true)
+    setMode(modeName, value) {
+      // 先将所有模式设为false
+      this.isWriteMode = false;
+      // 再设置指定模式
+      if (modeName === 'isWriteMode') this.isWriteMode = value;
+      // 更新标题
+      this.updateTitle();
+    },
+    
     // 选项处理
     handleOption(option, index) {
-      console.log('聊天页面收到选项点击:', option, '索引:', index);
-      
       // 根据不同选项执行相应逻辑
       switch (option.text) {
         case '聊天记录':
-          console.log('聊天记录在处理');
           this.handleHistoryOption();
+          break;
+        case '写教案':
+          this.setMode('isWriteMode', !this.isWriteMode);
           break;
         // 可以继续添加其他选项的处理
         default:
-          console.log('未知选项:', option.text);
+          break;
       }
       
       // 处理完选项后关闭面板
@@ -75,9 +101,10 @@ export const useChatOptionsStore = defineStore('chatOptions', {
     
     handleHistoryOption() {
       // 处理历史记录逻辑
-      console.log('处理历史记录');
       this.showHistoryPanel = true;
     },
+    
+
     
     // 页面事件处理
     handlePageClick(e) {

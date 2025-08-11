@@ -30,8 +30,7 @@
 		{
 			"path": "pages/markdown/markdown",
 			"style": {
-				"navigationBarTitleText": "Markdown渲染器",
-				"navigationStyle": "custom"
+				"navigationBarTitleText": "教案详情页"
 			}
 		},
 		{

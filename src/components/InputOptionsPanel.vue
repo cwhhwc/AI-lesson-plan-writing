@@ -31,13 +31,7 @@ const options = ref([
 const emit = defineEmits(['option-click', 'click']);
 
 const handleOptionClick = (option, index) => {
-  // 可以在这里添加内部逻辑处理
-  console.log('面板内部处理:', option, index);
-  
-  // 使用 Store 处理选项
-  chatOptionsStore.handleOption(option, index);
-  
-  // 向外发射事件（保持向后兼容）
+  // 发射事件，让父组件统一处理
   emit('option-click', option, index);
 };
 

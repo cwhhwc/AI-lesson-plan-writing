@@ -45,17 +45,16 @@ function handleH5Request(url, method, headers, data, onMessage) {
     headers,
     body: JSON.stringify(data)
   }).then(async res => {
-    // 先解析响应数据
-    const responseData = await res.json();
-    
     // 检查401错误
     if (res.status === 401) {
+      const responseData = await res.json();
       if (responseData.message && (
         responseData.message === API_CONFIG.ERROR_MESSAGES.TOKEN_INVALID ||
         responseData.message === API_CONFIG.ERROR_MESSAGES.TOKEN_MISSING
       )) {
         throw new Error('TOKEN_INVALID');
       }
+      return responseData;
     }
     
     // 如果是流式响应且有回调函数
@@ -63,8 +62,8 @@ function handleH5Request(url, method, headers, data, onMessage) {
       return handleStreamReceive({ response: res, onMessage });
     }
     
-    // 对于非200状态码，直接返回响应数据（包含错误信息）
-    // 不抛出异常，让业务层处理
+    // 对于普通响应，解析JSON
+    const responseData = await res.json();
     return responseData;
   });
 }

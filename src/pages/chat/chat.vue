@@ -29,6 +29,7 @@
       v-show="!chatOptionsStore.isAtBottom"
       class="scroll-to-bottom"
     />
+    <LessonPlanLoading />
   </view>
 </template>
 
@@ -41,6 +42,7 @@ import { useChatOptionsStore } from '@/stores/chatOptionsPanel.js';
 import ChatInput from '@/components/ChatInput.vue';
 import { setupBottomDetection, checkScrollPosition } from '@/utils/scrollDetection.js';
 import { useChat } from '@/composables/useChat.js';
+import LessonPlanLoading from '@/components/LessonPlanLoading.vue';
 
 // 使用 Pinia Store
 const chatOptionsStore = useChatOptionsStore();
@@ -103,6 +105,8 @@ onMounted(() => {
     setupBottomDetection(messageListRef);
     // 初始检查滚动位置
     checkScrollPosition(messageListRef);
+    // 初始化导航栏标题
+    chatOptionsStore.updateTitle();
   });
 });
 </script>

@@ -6,11 +6,12 @@
         <view v-for="(msg, idx) in messages" :key="idx" :class="['msg-row', msg.role === 'user' ? 'msg-user' : 'msg-ai']" :id="'msg-' + idx">
           <ChatBubble>
             <template v-if="msg.role === 'ai'">
+              <!-- AI消息渲染 -->
               <view class="ai-message" v-html="renderMarkdown(msg.content)"></view>
             </template>
             <template v-else>
-              <!-- 用户消息渲染 -->
-              <view class="user-message" v-html="formatUserMessage(msg.content)"></view>
+              <!-- 用户消息安全渲染 -->
+              <view class="user-message">{{ msg.content }}</view>
             </template>
           </ChatBubble>
         </view>
@@ -43,13 +44,6 @@ const props = defineProps({
 
 // 定义emits
 const emit = defineEmits(['new-chat']);
-
-// 格式化用户消息，处理换行符
-const formatUserMessage = (content) => {
-  if (!content) return '';
-  // 将换行符转换为 <br> 标签
-  return content.replace(/\n/g, '<br>');
-};
 
 // 处理新建会话
 const handleNewChat = () => {
