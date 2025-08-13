@@ -9,10 +9,16 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useLessonPlanStore } from '@/stores/lessonPlan.js'
 import 'katex/dist/katex.min.css'
 import { renderMarkdown } from '@/utils/renderMarkdown.js'
 
-// markdown内容响应式变量，可用于流式输入
+// 订阅 lessonPlanStore 中的教案正文
+const lessonPlanStore = useLessonPlanStore()
+const { lessonPlanContent } = storeToRefs(lessonPlanStore)
+
+// markdown内容响应式变量（镜像自 store）
 const markdown = ref('')
 const html = ref('')
 
@@ -21,9 +27,13 @@ watch(markdown, (newVal) => {
   html.value = renderMarkdown(newVal)
 }, { immediate: true })
 
+// 实时镜像 store 的正文到本地 markdown
+watch(lessonPlanContent, (val) => {
+  markdown.value = val || ''
+}, { immediate: true })
+
 // ==================== 流式输入区域开始 ====================
-// 在此处添加您的流式输入逻辑
-// 例如：WebSocket接收、API轮询、定时器等
+// 已由 useLessonPlanStore 流式维护 lessonPlanContent，无需本页拉流
 
 // 示例1：WebSocket流式输入
 // const ws = new WebSocket('ws://your-server.com')

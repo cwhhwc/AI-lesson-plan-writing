@@ -423,7 +423,8 @@ export class ChatStorageService {
         console.log(`找到会话: ${targetChat.name}, 消息数: ${targetChat.messages.length}`);
         return targetChat;
       } else {
-        console.warn('未找到对应的会话:', sessionId);
+        // 在新建会话的场景下，这是正常情况，不需要警告
+        console.log('会话不存在，将创建新会话:', sessionId);
         return null;
       }
     } catch (error) {

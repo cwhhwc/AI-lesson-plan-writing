@@ -48,7 +48,7 @@ import { useChatHistoryStore } from '@/stores/chatHistory.js';
 const chatHistoryStore = useChatHistoryStore();
 
 // 定义emit事件
-const emit = defineEmits(['select-chat', 'close']);
+const emit = defineEmits(['select-chat', 'close', 'clear-messages']);
 
 // 处理返回按钮点击
 const handleBack = () => {
@@ -79,6 +79,22 @@ const handleChatDeleted = (deleteData) => {
   const chatList = chatHistoryStore.getChatList;
   const updatedChatList = chatList.filter(chat => chat.id !== deleteData.sessionId);
   chatHistoryStore.setChatList(updatedChatList);
+  
+  // 检查删除的会话是否是当前选中的会话
+  const currentSelectedSessionId = chatHistoryStore.getSelectedSessionId;
+  if (currentSelectedSessionId === deleteData.sessionId) {
+    // 清空当前选中的会话
+    chatHistoryStore.clearSelectedChat();
+  }
+  
+  // 检查删除的会话是否是当前活跃的会话
+  const currentActiveSessionId = chatHistoryStore.getCurrentSessionId;
+  if (currentActiveSessionId === deleteData.sessionId) {
+    // 清空当前活跃的会话
+    chatHistoryStore.clearCurrentSession();
+    // 清空消息渲染区 - 通过emit通知父组件
+    emit('clear-messages');
+  }
 };
 
 // 组件挂载时初始化会话列表

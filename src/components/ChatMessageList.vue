@@ -3,8 +3,14 @@
     <view class="messages-content">
       <!-- 消息列表 -->
       <view class="messages-list">
-        <view v-for="(msg, idx) in messages" :key="idx" :class="['msg-row', msg.role === 'user' ? 'msg-user' : 'msg-ai']" :id="'msg-' + idx">
-          <ChatBubble>
+        <view v-for="(msg, idx) in messages" 
+        :key="idx" 
+        :class="['msg-row', msg.role === 'user' ? 'msg-user' : 'msg-ai']" 
+        :id="'msg-' + idx"
+        >
+          <ChatBubble 
+            :is-ai-message="msg.role === 'ai'"
+          >
             <template v-if="msg.role === 'ai'">
               <!-- AI消息渲染 -->
               <view class="ai-message" v-html="renderMarkdown(msg.content)"></view>
@@ -52,7 +58,6 @@ const handleNewChat = () => {
 
 // 消息容器引用
 const messagesContainer = ref(null);
-
 </script>
 
 <style scoped>

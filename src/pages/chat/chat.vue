@@ -22,6 +22,7 @@
       @click="(e) => e.stopPropagation()"
       @select-chat="handleSelectChat"
       @close="handleHistoryPanelClose"
+      @clear-messages="handleClearMessages"
     />
     
     <!-- 回到底部按钮 -->
@@ -29,7 +30,6 @@
       v-show="!chatOptionsStore.isAtBottom"
       class="scroll-to-bottom"
     />
-    <LessonPlanLoading />
   </view>
 </template>
 
@@ -92,6 +92,12 @@ const handleSendMessage = (text) => {
 const handleHistoryPanelClose = () => {
   chatOptionsStore.closeHistoryPanel();
   chatOptionsStore.toggleOptionsPanel(); // 关闭历史面板时显示选项面板
+};
+
+// 处理清空消息
+const handleClearMessages = () => {
+  // 清空当前会话ID和消息列表
+  handleNewChat();
 };
 
 // 使用通用页面点击处理器，统一管理所有面板

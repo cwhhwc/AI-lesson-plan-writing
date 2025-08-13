@@ -1,21 +1,49 @@
 <template>
   <view class="lesson-plan-loading" @click="handleNavigateToMarkdown">
     <view class="loading-container">
-      <view class="loading-title">教案生成中.....</view>
-      <view class="progress-bars">
+      <view class="loading-title">
+        {{ lessonPlanMode.isStreaming ? '教案生成中.....' : '教案已完成' }}
+      </view>
+      <view v-if="lessonPlanMode.isStreaming" class="progress-bars">
         <view class="progress-bar progress-bar-1"></view>
         <view class="progress-bar progress-bar-2"></view>
         <view class="progress-bar progress-bar-3"></view>
+      </view>
+      <view v-else class="completion-icon">
+        <text class="checkmark">✓</text>
       </view>
     </view>
   </view>
 </template>
 
 <script setup>
+import { useLessonPlanStore } from '@/stores/lessonPlan.js';
+import { useChatHistoryStore } from '@/stores/chatHistory.js';
+
+const lessonPlanMode = useLessonPlanStore();
+const chatHistoryStore = useChatHistoryStore();
+
+// 生成唯一页面ID
+const generateUniquePageId = () => {
+  // 获取当前活跃的会话ID
+  const currentSessionId = chatHistoryStore.getCurrentSessionId;
+  const timestamp = Date.now();
+  const randomId = Math.random().toString(36).substr(2, 9);
+  
+  // 如果没有当前活跃会话，使用时间戳作为基础
+  const baseId = currentSessionId || `new_${timestamp}`;
+  
+  return `${baseId}_${timestamp}_${randomId}`;
+};
+
 // 教案加载组件
 const handleNavigateToMarkdown = () => {
+  // 生成唯一页面ID
+  const uniquePageId = generateUniquePageId();
+  
+  // 跳转到markdown页面，携带唯一ID参数
   uni.navigateTo({
-    url: '/pages/markdown/markdown'
+    url: `/pages/markdown/markdown?id=${uniquePageId}`
   });
 };
 </script>
@@ -81,5 +109,18 @@ const handleNavigateToMarkdown = () => {
 
 .progress-bar-3 {
   width: 70%;
+}
+
+.completion-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20rpx;
+}
+
+.checkmark {
+  font-size: 80rpx;
+  color: #4CAF50;
+  font-weight: bold;
 }
 </style>
