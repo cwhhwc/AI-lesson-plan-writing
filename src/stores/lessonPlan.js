@@ -13,10 +13,12 @@ export const useLessonPlanStore = defineStore('lessonPlan', {
     rawContent: '',
     // 是否已经找到开始标记
     isStart: false,
-    // 用于存储流式传输的教案正文
+    // 用于存储流式传输的教案正文 (Markdown格式)
     lessonPlanContent: '',
     // 用于标记流式传输是否正在进行
     isStreaming: false,
+    // [新增] 用于存储从后端返回的、已存盘的教案对象
+    savedDocument: null,
     // 当前处理模式（为将来扩展其他模式预留）
     currentMode: 'lesson',
     // 聊天数据回调函数（用于标记前内容）
@@ -36,6 +38,12 @@ export const useLessonPlanStore = defineStore('lessonPlan', {
       this.isStart = false;
       this.lessonPlanContent = '';
       this.isStreaming = true;
+      this.savedDocument = null; // 同时清空已保存的教案状态
+    },
+
+    // [新增] 设置已保存的教案对象
+    setSavedDocument(document) {
+      this.savedDocument = document;
     },
     
     // 统一的数据处理入口
@@ -46,10 +54,6 @@ export const useLessonPlanStore = defineStore('lessonPlan', {
       if (this.currentMode === 'lesson') {
         this._handleLessonModeData(chunk);
       }
-      // 将来可以在这里添加其他模式的处理
-      // else if (this.currentMode === 'analyze') {
-      //   this._handleAnalyzeModeData(chunk);
-      // }
     },
     
     // 处理教案数据：搜索标记并分流
@@ -72,23 +76,17 @@ export const useLessonPlanStore = defineStore('lessonPlan', {
           this.isStart = true;
           const startIndexInRawContent = this.rawContent.length - searchArea.length + startIndexInSearchArea;
 
-          // 仅转发“当前chunk中、标记之前、且尚未发送”的部分，避免重复
-          // 计算在 searchArea 中标记之前的内容
           const preInSearchArea = searchArea.slice(0, startIndexInSearchArea);
-          // 去掉开头的 tail（来自上一包已发送的内容）后，得到当前chunk中需要补发的前半部分
           const preInCurrentChunk = preInSearchArea.slice(tail.length);
           if (preInCurrentChunk && this.chatCallback) {
             this.chatCallback(preInCurrentChunk);
           }
 
-          // 标记之后的内容存入教案正文
           const postMarkerContent = this.rawContent.slice(startIndexInRawContent + markerLength);
           this.lessonPlanContent = postMarkerContent;
 
-          // 清空缓冲区
           this.rawContent = '';
         } else {
-          // 未找到标记，继续向聊天模式转发
           if (this.chatCallback) {
             this.chatCallback(chunk);
           }

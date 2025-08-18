@@ -2,9 +2,11 @@
   <view class="lesson-plan-loading" @click="handleNavigateToMarkdown">
     <view class="loading-container">
       <view class="loading-title">
-        {{ lessonPlanMode.isStreaming ? '教案生成中.....' : '教案已完成' }}
+        <!-- UI文本保持不变，但数据来源已变为props -->
+        {{ cardData.status === 'loading' ? '教案生成中.....' : '教案已完成' }}
       </view>
-      <view v-if="lessonPlanMode.isStreaming" class="progress-bars">
+      <!-- 根据props中的status来决定显示加载动画还是完成图标 -->
+      <view v-if="cardData.status === 'loading'" class="progress-bars">
         <view class="progress-bar progress-bar-1"></view>
         <view class="progress-bar progress-bar-2"></view>
         <view class="progress-bar progress-bar-3"></view>
@@ -17,49 +19,45 @@
 </template>
 
 <script setup>
-import { useLessonPlanStore } from '@/stores/lessonPlan.js';
-import { useChatHistoryStore } from '@/stores/chatHistory.js';
+// 1. 移除所有不再需要的import
+import { computed } from 'vue';
 
-const lessonPlanMode = useLessonPlanStore();
-const chatHistoryStore = useChatHistoryStore();
+// 2. 定义props，接收来自父组件的卡片数据
+const props = defineProps({
+  cardData: {
+    type: Object,
+    required: true
+  }
+});
 
-// 生成唯一页面ID
-const generateUniquePageId = () => {
-  // 获取当前活跃的会话ID
-  const currentSessionId = chatHistoryStore.getCurrentSessionId;
-  const timestamp = Date.now();
-  const randomId = Math.random().toString(36).substr(2, 9);
-  
-  // 如果没有当前活跃会话，使用时间戳作为基础
-  const baseId = currentSessionId || `new_${timestamp}`;
-  
-  return `${baseId}_${timestamp}_${randomId}`;
-};
-
-// 教案加载组件
+// 3. 移除ID生成逻辑，重写跳转逻辑
 const handleNavigateToMarkdown = () => {
-  // 生成唯一页面ID
-  const uniquePageId = generateUniquePageId();
-  
-  // 跳转到markdown页面，携带唯一ID参数
-  uni.navigateTo({
-    url: `/pages/markdown/markdown?id=${uniquePageId}`
-  });
+  // 如果教案已经保存并获得了永久ID，则使用永久ID跳转
+  if (props.cardData.permanentId) {
+    uni.navigateTo({
+      url: `/pages/markdown/markdown?id=${props.cardData.permanentId}`
+    });
+  } 
+  // 否则（仍在生成中），使用临时ID跳转，进入实时观看模式
+  else if (props.cardData.temporaryId) {
+    uni.navigateTo({
+      url: `/pages/markdown/markdown?tempId=${props.cardData.temporaryId}`
+    });
+  }
 };
 </script>
 
 <style scoped>
 .lesson-plan-loading {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  position: relative;
+  width: 100%;
+  margin-top: 20rpx;
   pointer-events: auto;
   cursor: pointer;
 }
 
 .loading-container {
-  width: 80vw;
+  width: 100%;
   height: 35vh;
   background-color: #ffffff;
   border-radius: 20rpx;
@@ -70,6 +68,7 @@ const handleNavigateToMarkdown = () => {
   padding: 40rpx;
   box-sizing: border-box;
   transition: transform 0.10s ease;
+  border: 2rpx solid #e0e0e0;
 }
 
 .loading-container:active {

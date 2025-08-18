@@ -7,7 +7,8 @@ export const API_CONFIG = {
   ENDPOINTS: {
     LOGIN: '/login',
     REGISTER: '/register',
-    CHAT: '/chat'
+    CHAT: '/chat',
+    DOCUMENTS: '/documents', // 重构为通用名称
   },
   
   // 请求头配置

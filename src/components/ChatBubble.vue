@@ -1,42 +1,38 @@
 <template>
   <view class="chat-bubble">
-    <slot />
-    <!-- 教案加载组件 -->
-    <LessonPlanLoading 
-      v-if="shouldShowLessonPlan"
-    />
+    <!-- 改造后：组件自己决定渲染内容 -->
+
+    <!-- 情况一：如果消息是教案卡片 -->
+    <template v-if="message.type === 'lesson_plan_card'">
+      <LessonPlanLoading :card-data="message.content" />
+    </template>
+
+    <!-- 情况二：如果是普通消息 -->
+    <template v-else>
+      <!-- AI消息：使用v-html渲染，支持Markdown格式 -->
+      <view v-if="message.role === 'ai'" class="ai-message" v-html="renderMarkdown(message.content || '')"></view>
+      <!-- 用户消息：直接渲染文本，防止XSS -->
+      <view v-else class="user-message">{{ message.content }}</view>
+    </template>
+
   </view>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
-import { useLessonPlanStore } from '@/stores/lessonPlan.js';
+import { computed } from 'vue';
 import LessonPlanLoading from '@/components/LessonPlanLoading.vue';
+import { renderMarkdown } from '@/utils/renderMarkdown.js';
 
-// 定义props
+// 1. props改为接收完整的message对象
 const props = defineProps({
-  isAiMessage: {
-    type: Boolean,
+  message: {
+    type: Object,
     required: true
   }
 });
 
-// 引入教案store
-const lessonPlanStore = useLessonPlanStore();
+// 2. 不再需要监听全局状态，逻辑已移入template中
 
-// 本地状态：是否已经显示过教案组件
-const hasShownLessonPlan = ref(false);
-
-// 判断当前消息是否应该显示教案加载组件
-const shouldShowLessonPlan = computed(() => {
-  // 如果是AI消息且（教案已经开始传输 或 之前已经显示过教案组件）
-  if (props.isAiMessage && lessonPlanStore.isStart && !hasShownLessonPlan.value) {
-    // 第一次检测到教案开始，设置标记
-    hasShownLessonPlan.value = true;
-  }
-  
-  return props.isAiMessage && hasShownLessonPlan.value;
-});
 </script>
 
 <style scoped>
@@ -51,12 +47,19 @@ const shouldShowLessonPlan = computed(() => {
   word-break: break-all;
   box-sizing: border-box;
   margin: 12rpx 0;
-  /* 启用文本选择 */
   user-select: text;
   -webkit-user-select: text;
-  -moz-user-select: text;
-  -ms-user-select: text;
-  /* 确保文本可以被选中 */
   cursor: text;
 }
-</style> 
+
+/* 将原本在ChatMessageList中的样式迁移过来 */
+.user-message {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.5;
+}
+
+.ai-message {
+  line-height: 1.5;
+}
+</style>

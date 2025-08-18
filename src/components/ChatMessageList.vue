@@ -9,17 +9,8 @@
         :id="'msg-' + idx"
         >
           <ChatBubble 
-            :is-ai-message="msg.role === 'ai'"
-          >
-            <template v-if="msg.role === 'ai'">
-              <!-- AI消息渲染 -->
-              <view class="ai-message" v-html="renderMarkdown(msg.content)"></view>
-            </template>
-            <template v-else>
-              <!-- 用户消息安全渲染 -->
-              <view class="user-message">{{ msg.content }}</view>
-            </template>
-          </ChatBubble>
+            :message="msg"
+          />
         </view>
       </view>
       

@@ -1,9 +1,17 @@
 <template>
-  <view class="markdown-container">
-    <view class="markdown-content">
-      <!-- Markdown内容将在这里渲染 -->
-      <view class="md-html" v-html="html"></view>
-    </view>
+  <view class="page-container">
+    <!-- 1. 使用新的工具栏组件，并监听它发出的 command 事件 -->
+    <EditorToolbar @command="handleToolbarCommand" />
+
+    <!-- 编辑器 -->
+    <editor
+      id="editor"
+      class="editor-area"
+      placeholder="等待AI生成内容，或在此处开始编辑..."
+      :read-only="isStreaming"
+      @ready="onEditorReady"
+      @input="onEditorInput"
+    ></editor>
   </view>
 </template>
 
@@ -14,117 +22,97 @@ import { useLessonPlanStore } from '@/stores/lessonPlan.js'
 import 'katex/dist/katex.min.css'
 import { renderMarkdown } from '@/utils/renderMarkdown.js'
 
-// 订阅 lessonPlanStore 中的教案正文
+// 2. 引入刚刚创建的工具栏组件
+import EditorToolbar from '../../components/EditorToolbar.vue'
+
+// --- Pinia Store 连接 ---
 const lessonPlanStore = useLessonPlanStore()
-const { lessonPlanContent } = storeToRefs(lessonPlanStore)
+const { lessonPlanContent, isStreaming } = storeToRefs(lessonPlanStore)
 
-// markdown内容响应式变量（镜像自 store）
-const markdown = ref('')
-const html = ref('')
+// --- 编辑器核心变量 ---
+let editorCtx = null
 
-// 监听markdown内容变化，实时渲染
-watch(markdown, (newVal) => {
-  html.value = renderMarkdown(newVal)
-}, { immediate: true })
+// --- 编辑器生命周期函数 ---
+const onEditorReady = () => {
+  uni.createSelectorQuery().select('#editor').context((res) => {
+    editorCtx = res.context
+    if (lessonPlanContent.value) {
+      const initialHtml = renderMarkdown(lessonPlanContent.value)
+      editorCtx.setContents({ html: initialHtml })
+    }
+  }).exec()
+}
 
-// 实时镜像 store 的正文到本地 markdown
-watch(lessonPlanContent, (val) => {
-  markdown.value = val || ''
-}, { immediate: true })
+// --- 核心数据流逻辑 ---
+const onEditorInput = (e) => {
+  if (isStreaming.value) return
+  lessonPlanStore.lessonPlanContent = e.detail.html
+}
 
-// ==================== 流式输入区域开始 ====================
-// 已由 useLessonPlanStore 流式维护 lessonPlanContent，无需本页拉流
+watch(lessonPlanContent, (newMarkdown, oldMarkdown) => {
+  if (!isStreaming.value) return
+  if (!editorCtx || newMarkdown === oldMarkdown) return
+  const newHtml = renderMarkdown(newMarkdown)
+  editorCtx.setContents({ html: newHtml })
+})
 
-// 示例1：WebSocket流式输入
-// const ws = new WebSocket('ws://your-server.com')
-// ws.onmessage = (event) => {
-//   markdown.value += event.data
-// }
+// 3. 新增一个函数，用于处理来自工具栏组件的命令
+const handleToolbarCommand = (command) => {
+  if (!editorCtx) return
 
-// 示例2：定时器模拟流式输入
-// let streamIndex = 0
-// const streamData = ['# 标题\n\n', '这是第一段内容\n\n', '## 子标题\n\n', '更多内容...']
-// function streamInput() {
-//   if (streamIndex < streamData.length) {
-//     markdown.value += streamData[streamIndex]
-//     streamIndex++
-//     setTimeout(streamInput, 100)
-//   }
-// }
-// streamInput()
-
-// 示例3：API轮询流式输入
-// async function pollStreamData() {
-//   const response = await fetch('/api/stream-data')
-//   const data = await response.json()
-//   if (data.content) {
-//     markdown.value += data.content
-//   }
-//   setTimeout(pollStreamData, 1000)
-// }
-// pollStreamData()
-
-// 示例4：直接赋值（用于测试）
-// markdown.value = '# 测试标题\n\n这是测试内容'
-
-// ==================== 流式输入区域结束 ====================
+  if (command.name === 'clear') {
+    editorCtx.removeFormat()
+  } else {
+    editorCtx.format(command.name, command.value || '')
+  }
+}
 </script>
 
 <style scoped>
-.markdown-container {
-  background-color: #ffffff;
-  min-height: 100vh;
-  padding: 20px;
+.page-container {
+  padding: 10px;
+  box-sizing: border-box;
+  height: 95vh;
+  display: flex;
+  flex-direction: column;
 }
 
-.markdown-content {
-  max-width: 800px;
-  margin: 0 auto;
-  line-height: 1.6;
+.editor-area {
+  flex: 1;
+  width: 100%;
+  height: 90%;
+  box-sizing: border-box;
 }
 
-.md-html {
-  margin-top: 24px;
-}
-
-/* 表格样式 */
-.md-html :deep(table) {
-  border-collapse: collapse;
-  min-width: 600px;
-  margin: 16px 0;
-}
-
-/* 表格容器横向滚动 */
-.md-html :deep(table) {
-  display: block;
-  overflow-x: auto;
-  white-space: nowrap;
-}
-
-/* 数学公式横向滚动 */
-.md-html :deep(.katex-display) {
-  overflow-x: auto;
-  display: block;
-  margin: 1em 0;
-}
-
-.md-html :deep(th),
-.md-html :deep(td) {
-  border: 1px solid #ddd;
-  padding: 8px 12px;
-  text-align: left;
-}
-
-.md-html :deep(th) {
+.editor-area[read-only] {
   background-color: #f5f5f5;
+  opacity: 0.8;
+}
+
+/* 修复有序列表（ol）编号错误的CSS */
+:deep(ol) {
+  /* 创建一个名为 'list-counter' 的计数器 */
+  counter-reset: list-counter;
+  /* uniapp的rich-text默认有40px的padding，这里也设置一下以对齐 */
+  padding-left: 40px;
+}
+
+:deep(li) {
+  /* 移除li默认的项目符号 */
+  list-style-type: none;
+  position: relative;
+}
+
+:deep(ol > li::before) {
+  /* 递增计数器并将值作为内容显示 */
+  counter-increment: list-counter;
+  content: counter(list-counter) ". "; /* 显示 "1. ", "2. ", etc. */
+  
+  /* 定位数字，使其看起来像默认列表 */
+  position: absolute;
+  left: -40px; /* 与ol的padding-left相对应 */
+  width: 30px; /* 留出空间给数字 */
+  text-align: right;
   font-weight: bold;
 }
-
-.md-html :deep(tr:nth-child(even)) {
-  background-color: #f9f9f9;
-}
-
-.md-html :deep(tr:hover) {
-  background-color: #f0f0f0;
-}
-</style> 
+</style>
