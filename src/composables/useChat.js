@@ -33,12 +33,15 @@ export function useChat(options = {}) {
   
   const messages = ref([]);
   const sessionId = ref('');
-  const aiContent = ref('');
   
   const chatHistoryStore = useChatHistoryStore();
   const lessonPlanStore = useLessonPlanStore();
   const chatOptionsStore = useChatOptionsStore();
   
+  /**
+   * 处理新建会话
+   * @param {Object} chatInputRef - 聊天输入组件引用
+   */
   const handleNewChat = (chatInputRef) => {
     sessionId.value = '';
     messages.value = [];
@@ -51,6 +54,10 @@ export function useChat(options = {}) {
     });
   };
 
+  /**
+   * 处理会话选择
+   * @param {string} selectedSessionId - 选中的会话ID
+   */
   const handleSelectChat = (selectedSessionId) => {
     sessionId.value = selectedSessionId;
     chatHistoryStore.setSelectedSessionId(selectedSessionId);
@@ -77,6 +84,11 @@ export function useChat(options = {}) {
     }
   };
 
+  /**
+   * 将存储格式的消息转换为渲染格式
+   * @param {Array} storageMessages - 存储格式的消息数组
+   * @returns {Array} 渲染格式的消息数组
+   */
   const convertStorageToRenderFormat = (storageMessages) => {
     const convertedMessages = [];
     storageMessages.forEach(message => {
@@ -84,25 +96,30 @@ export function useChat(options = {}) {
         convertedMessages.push({ role: 'user', content: message.user });
       }
       if (message.ai) {
+        // (此函数将在后续步骤中改造，以支持新的卡片消息结构)
         if (typeof message.ai === 'string') {
           convertedMessages.push({ role: 'ai', content: message.ai });
-        } else if (typeof message.ai === 'object' && message.ai.type === 'lesson_plan_card') {
-          convertedMessages.push({
-            role: 'system',
-            type: 'lesson_plan_card',
-            content: message.ai.content
-          });
-        }
+        } 
       }
     });
     return convertedMessages;
   };
 
+  /**
+   * 处理发送消息
+   * @param {string} text - 用户输入的消息
+   * @param {Object} chatInputRef - 聊天输入组件引用
+   */
   const handleSendMessage = (text, chatInputRef) => {
     messages.value.push({ role: 'user', content: text });
     receiveAIMessage(text, chatInputRef);
   };
 
+  /**
+   * 接收AI消息 - 主入口函数
+   * @param {string} userText - 用户消息
+   * @param {Object} chatInputRef - 聊天输入组件引用
+   */
   const receiveAIMessage = async (userText, chatInputRef) => {
     if (chatOptionsStore.isWriteMode) {
       await _handleLessonModeFlow(userText, chatInputRef);
@@ -111,51 +128,56 @@ export function useChat(options = {}) {
     }
   };
 
+  /**
+   * [教案模式] 处理写教案模式的流式数据
+   * @param {string} userText - 用户消息
+   * @param {Object} chatInputRef - 聊天输入组件引用
+   */
   const _handleLessonModeFlow = async (userText, chatInputRef) => {
-    const aiMsgIndex = _prepareAIMessage();
-    
-    // --- 两阶段ID改造核心 ---
-    // 1. 在流程开始时，立刻生成临时ID，并创建“加载中”的卡片
-    const tempId = _generateTemporaryId(chatHistoryStore);
-    const initialCardMessage = {
-      role: 'system',
-      type: 'lesson_plan_card',
-      content: {
-        temporaryId: tempId,
-        permanentId: null,
-        status: 'loading',
-        title: '教案生成中...',
-        summary: 'AI正在思考，请稍候'
-      }
-    };
-    // 将卡片作为一条新消息插入
-    messages.value.push(initialCardMessage);
+    // 1. 创建一个复合消息对象，用于承载“开头语”和“教案卡片”
+    const aiMsgIndex = _prepareAIMessage('lesson');
 
+    // 2. 定义流式回调，它只会更新复合消息的 content 部分
     const chatCallback = (plainTextChunk) => {
       if (plainTextChunk) {
-        aiContent.value += plainTextChunk;
-        messages.value[aiMsgIndex].content = aiContent.value;
+        messages.value[aiMsgIndex].content += plainTextChunk;
       }
     };
     lessonPlanStore.setMode('lesson', chatCallback);
     lessonPlanStore.startGeneration();
     
+    // 3. 监听isStart状态，一旦教案开始，立刻创建“加载中”的卡片
+    const stopWatch = watch(() => lessonPlanStore.isStart, (started) => {
+      if (started) {
+        messages.value[aiMsgIndex].card = {
+          type: 'lesson_plan_card',
+          status: 'loading',
+          temporaryId: _generateTemporaryId(chatHistoryStore),
+          permanentId: null,
+          title: '教案生成中...',
+          summary: 'AI正在思考，请稍候'
+        };
+        stopWatch(); // 创建后立刻停止监听，避免重复创建
+      }
+    });
+
     const streamHandler = (chunk) => {
+      console.log('断点：已进入流式回调');
+      debugger;
       _parseStreamChunk(chunk, (data) => {
         if (data.reply) {
-          const normalized = data.reply.replace(/\n/g, '\n');
+          const normalized = data.reply.replace(/\\n/g, '\n');
           lessonPlanStore.processStreamData(normalized);
         }
-      }, (errorMessage) => {
-        messages.value[aiMsgIndex].content = errorMessage;
       });
     };
     
     await _executeApiCall(userText, chatInputRef, streamHandler, async () => {
       lessonPlanStore.endGeneration();
+      stopWatch(); // 确保在流程结束时也停止监听
+      
       const finalMarkdown = lessonPlanStore.lessonPlanContent;
-      if (!finalMarkdown) {
-        messages.value[aiMsgIndex].content = '教案生成内容为空，无法保存。';
+      if (!finalMarkdown || !messages.value[aiMsgIndex].card) {
         return;
       }
 
@@ -166,39 +188,34 @@ export function useChat(options = {}) {
         const newDocument = await createDocumentApi({ title: docTitle, content: finalHtml });
 
         if (newDocument && newDocument.id) {
-          // 2. 获取到永久ID后，更新Pinia Store
-          lessonPlanStore.setSavedDocument(newDocument);
-
-          // 3. 根据临时ID找到之前创建的卡片，并用永久ID更新它
-          const cardToUpdate = messages.value.find(m => m.content?.temporaryId === tempId);
-          if (cardToUpdate) {
-            cardToUpdate.content.status = 'completed';
-            cardToUpdate.content.permanentId = newDocument.id;
-            cardToUpdate.content.title = newDocument.title;
-            cardToUpdate.content.summary = '教案已生成，点击可进入详情页编辑与查看。';
-          }
-          // 4. 保存包含完整信息的聊天记录
-          const introMessage = messages.value[aiMsgIndex].content;
-          await saveChatToStorage(userText, introMessage);
-          await saveChatToStorage(null, cardToUpdate); // 将卡片作为独立的AI消息保存
-
+          // 4. 成功后，用后端返回的永久ID和数据，更新卡片
+          messages.value[aiMsgIndex].card.status = 'completed';
+          messages.value[aiMsgIndex].card.permanentId = newDocument.id;
+          messages.value[aiMsgIndex].card.title = newDocument.title;
+          messages.value[aiMsgIndex].card.summary = '教案已生成，点击可进入详情页编辑与查看。';
         } else {
           throw new Error('后端创建文档失败，未返回有效ID。');
         }
       } catch (error) {
         console.error('创建教案文档失败:', error);
-        const cardToUpdate = messages.value.find(m => m.content?.temporaryId === tempId);
-        if(cardToUpdate) cardToUpdate.content.status = 'error';
-        await saveChatToStorage(userText, `[教案云端保存失败]`);
+        if (messages.value[aiMsgIndex].card) messages.value[aiMsgIndex].card.status = 'error';
       }
+
+      // 本地存储将在后续步骤中改造
+      // await saveChatToStorage(userText, aiResponseMsg);
 
     }, (error) => {
       lessonPlanStore.endGeneration();
-      const cardToUpdate = messages.value.find(m => m.content?.temporaryId === tempId);
-      if(cardToUpdate) cardToUpdate.content.status = 'error';
+      stopWatch();
+      if (messages.value[aiMsgIndex].card) messages.value[aiMsgIndex].card.status = 'error';
     });
   };
 
+  /**
+   * [聊天模式] 处理普通聊天模式的完整流程
+   * @param {string} userText - 用户消息
+   * @param {Object} chatInputRef - 聊天输入组件引用
+   */
   const _handleChatModeFlow = async (userText, chatInputRef) => {
     const aiMsgIndex = _prepareAIMessage();
     const streamHandler = (chunk) => _handleChatModeStream(chunk, aiMsgIndex);
@@ -210,18 +227,29 @@ export function useChat(options = {}) {
     });
   };
 
+  /**
+   * [聊天模式] 处理AI消息流式响应
+   * @param {string} chunk - 流式数据块
+   * @param {number} msgIndex - 消息索引
+   */
   const _handleChatModeStream = (chunk, msgIndex) => {
     _parseStreamChunk(chunk, (data) => {
       if (data.reply) {
-        aiContent.value += data.reply;
-        messages.value[msgIndex].content = aiContent.value;
+        messages.value[msgIndex].content += data.reply;
       }
-    }, (errorMessage) => {
-      messages.value[msgIndex].content = errorMessage;
     });
   };
   
-  const _parseStreamChunk = (chunk, onData, onError) => {
+  /**
+   * [通用] 解析流式JSON数据
+   * @param {string} chunk - 原始数据块
+   * @param {Function} onData - 数据处理回调
+   */
+  const _parseStreamChunk = (chunk, onData) => {
+      // 添加计数器（可以放在函数外部或使用闭包）
+  if (typeof window.streamDataCounter === 'undefined') {
+    window.streamDataCounter = 0;
+  }
     const lines = chunk.split(/\r?\n/).filter(Boolean);
     for (const line of lines) {
       try {
@@ -235,14 +263,19 @@ export function useChat(options = {}) {
           return;
         }
         if (data.code === 0) {
-          onData(data, false);
+          onData(data);
         } else if (data.message) {
-          onError(data.message);
+          console.error('Stream error message:', data.message);
         }
       } catch (e) {}
     }
   };
 
+  /**
+   * 保存聊天记录到长期缓存
+   * @param {string} userText - 用户消息
+   * @param {string|Object} aiMessage - AI回复
+   */
   const saveChatToStorage = async (userText, aiMessage) => {
     const userId = chatStorageAPI._getUserIdFromToken();
     if (!userId) return;
@@ -262,12 +295,30 @@ export function useChat(options = {}) {
     }
   };
 
-  const _prepareAIMessage = () => {
-    messages.value.push({ role: 'ai', content: '' });
-    aiContent.value = '';
+  /**
+   * [通用] 准备AI消息位置
+   * @param {string} [mode='chat'] - 模式，'chat' 或 'lesson'
+   * @returns {number} 消息索引
+   */
+  const _prepareAIMessage = (mode = 'chat') => {
+    let msg;
+    if (mode === 'lesson') {
+      msg = { role: 'ai', content: '', card: null };
+    } else {
+      msg = { role: 'ai', content: '' };
+    }
+    messages.value.push(msg);
     return messages.value.length - 1;
   };
 
+  /**
+   * [通用] 执行API调用的统一逻辑
+   * @param {string} userText - 用户消息
+   * @param {Object} chatInputRef - 聊天输入组件引用
+   * @param {Function} streamHandler - 流处理器
+   * @param {Function} onSuccess - 成功回调
+   * @param {Function} onError - 错误回调
+   */
   const _executeApiCall = async (userText, chatInputRef, streamHandler, onSuccess, onError) => {
     if (chatInputRef) chatInputRef.setIsSending(true);
     try {
@@ -285,6 +336,9 @@ export function useChat(options = {}) {
     }
   };
 
+  /**
+   * token失效统一处理
+   */
   const handleTokenInvalid = () => {
     removeToken();
     uni.showToast({ title: '登录已过期，请重新登录', icon: 'none', duration: 2000 });

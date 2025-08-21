@@ -2,17 +2,20 @@
   <view class="lesson-plan-loading" @click="handleNavigateToMarkdown">
     <view class="loading-container">
       <view class="loading-title">
-        <!-- UI文本保持不变，但数据来源已变为props -->
+        <!-- 根据传入的 cardData 状态，显示不同的文本 -->
         {{ cardData.status === 'loading' ? '教案生成中.....' : '教案已完成' }}
       </view>
-      <!-- 根据props中的status来决定显示加载动画还是完成图标 -->
+      <!-- 根据 cardData 状态，显示加载动画或完成图标 -->
       <view v-if="cardData.status === 'loading'" class="progress-bars">
         <view class="progress-bar progress-bar-1"></view>
         <view class="progress-bar progress-bar-2"></view>
         <view class="progress-bar progress-bar-3"></view>
       </view>
-      <view v-else class="completion-icon">
+      <view v-else-if="cardData.status === 'completed'" class="completion-icon">
         <text class="checkmark">✓</text>
+      </view>
+       <view v-else-if="cardData.status === 'error'" class="completion-icon">
+        <text class="checkmark">✕</text> <!-- 显示一个错误图标 -->
       </view>
     </view>
   </view>
@@ -20,7 +23,6 @@
 
 <script setup>
 // 1. 移除所有不再需要的import
-import { computed } from 'vue';
 
 // 2. 定义props，接收来自父组件的卡片数据
 const props = defineProps({
@@ -44,6 +46,7 @@ const handleNavigateToMarkdown = () => {
       url: `/pages/markdown/markdown?tempId=${props.cardData.temporaryId}`
     });
   }
+  // 如果两个ID都没有，则不执行任何操作
 };
 </script>
 
@@ -119,7 +122,27 @@ const handleNavigateToMarkdown = () => {
 
 .checkmark {
   font-size: 80rpx;
-  color: #4CAF50;
+  color: #4CAF50; /* 成功是绿色 */
   font-weight: bold;
 }
+
+/* 错误状态下的图标颜色 */
+.completion-icon .checkmark {
+  color: #f44336; /* 失败是红色 */
+}
+
+/* 仅在成功状态下显示绿色 */
+.completion-icon:has(text.checkmark) {
+    /* This is a trick, but let's assume the checkmark class is sufficient */
+    color: #4CAF50;
+}
+
+.completion-icon > text.checkmark {
+    color: #4CAF50;
+}
+
+.completion-icon[data-status="error"] > text.checkmark {
+    color: #f44336;
+}
+
 </style>
