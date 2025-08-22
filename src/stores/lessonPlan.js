@@ -63,7 +63,6 @@ export const useLessonPlanStore = defineStore('lessonPlan', {
         this.lessonPlanContent += chunk;
       }else{
         // 还未找到标记，在缓冲区中搜索
-        console.log('还未找到标记');
         const markerLength = START_MARKER.length;
         const tail = this.rawContent.slice(-(markerLength - 1));
         const searchArea = tail + chunk;

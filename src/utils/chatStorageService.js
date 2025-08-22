@@ -218,7 +218,7 @@ export class ChatStorageService {
    * @param {string} aiMessage AI回复
    * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
    */
-  async createNewChat(userId, sessionId, chatName, userMessage, aiMessage) {
+  async createNewChat(userId, sessionId, chatName, userMessage, aiMessage, card = null) {
     // 参数验证
     const validation = this._validateParams({ userId, sessionId, userMessage, aiMessage });
     if (!validation.valid) {
@@ -240,7 +240,7 @@ export class ChatStorageService {
         const chat = createChatTemplate(sessionId, chatName || '新对话');
         
         // 4. 创建首条消息
-        const firstMessage = createMessageTemplate(userMessage, aiMessage);
+        const firstMessage = createMessageTemplate(userMessage, aiMessage, card);
         chat.messages.push(firstMessage);
         
         // 5. 添加到字典存储 - O(1)插入
@@ -270,7 +270,7 @@ export class ChatStorageService {
    * @param {string} aiMessage AI回复
    * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
    */
-  async continueChat(userId, sessionId, userMessage, aiMessage) {
+  async continueChat(userId, sessionId, userMessage, aiMessage, card = null) {
     // 参数验证
     const validation = this._validateParams({ userId, sessionId, userMessage, aiMessage });
     if (!validation.valid) {
@@ -290,7 +290,7 @@ export class ChatStorageService {
         }
         
         // 3. 创建新消息
-        const newMessage = createMessageTemplate(userMessage, aiMessage);
+        const newMessage = createMessageTemplate(userMessage, aiMessage, card);
         
         // 4. 添加到会话的消息列表中
         targetChat.messages.push(newMessage);

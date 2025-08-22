@@ -17,6 +17,8 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import { getDocumentByIdApi } from '@/api.js'
 import { storeToRefs } from 'pinia'
 import { useLessonPlanStore } from '@/stores/lessonPlan.js'
 import 'katex/dist/katex.min.css'
@@ -31,12 +33,16 @@ const { lessonPlanContent, isStreaming } = storeToRefs(lessonPlanStore)
 
 // --- 编辑器核心变量 ---
 let editorCtx = null
+const pendingInitialHtml = ref(null)
 
 // --- 编辑器生命周期函数 ---
 const onEditorReady = () => {
   uni.createSelectorQuery().select('#editor').context((res) => {
     editorCtx = res.context
-    if (lessonPlanContent.value) {
+    if (pendingInitialHtml.value !== null) {
+      editorCtx.setContents({ html: pendingInitialHtml.value })//富文本编辑器中设置内容
+      pendingInitialHtml.value = null
+    } else if (lessonPlanContent.value) {
       const initialHtml = renderMarkdown(lessonPlanContent.value)
       editorCtx.setContents({ html: initialHtml })
     }
@@ -66,6 +72,31 @@ const handleToolbarCommand = (command) => {
     editorCtx.format(command.name, command.value || '')
   }
 }
+
+// --- 根据路由参数加载已保存教案（仅当存在 id 时）---
+async function loadDocumentIfNeeded(options) {
+  const { id } = options || {}
+  if (!id) return
+  try {
+    const doc = await getDocumentByIdApi(id)
+    if (doc && doc.id) {
+      const html = doc.content || ''
+      if (editorCtx) {
+        editorCtx.setContents({ html })
+      } else {
+        pendingInitialHtml.value = html
+      }
+    } else {
+      uni.showToast({ title: '未找到教案或无权限', icon: 'none' })
+    }
+  } catch (e) {
+    uni.showToast({ title: '加载教案失败', icon: 'none' })
+  }
+}
+
+onLoad((options) => {
+  loadDocumentIfNeeded(options)
+})
 </script>
 
 <style scoped>

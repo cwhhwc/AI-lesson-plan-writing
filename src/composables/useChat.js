@@ -95,11 +95,14 @@ export function useChat(options = {}) {
       if (message.user) {
         convertedMessages.push({ role: 'user', content: message.user });
       }
-      if (message.ai) {
-        // (此函数将在后续步骤中改造，以支持新的卡片消息结构)
-        if (typeof message.ai === 'string') {
-          convertedMessages.push({ role: 'ai', content: message.ai });
-        } 
+      const hasAiText = typeof message.ai === 'string' && message.ai !== '';
+      const hasCard = message.card !== null && message.card !== undefined;
+      if (hasAiText || hasCard) {
+        const aiMsg = { role: 'ai', content: hasAiText ? message.ai : '' };
+        if (hasCard) {
+          aiMsg.card = message.card;
+        }
+        convertedMessages.push(aiMsg);
       }
     });
     return convertedMessages;
@@ -136,6 +139,8 @@ export function useChat(options = {}) {
   const _handleLessonModeFlow = async (userText, chatInputRef) => {
     // 1. 创建一个复合消息对象，用于承载“开头语”和“教案卡片”
     const aiMsgIndex = _prepareAIMessage('lesson');
+    let resolveCardGate;
+    const cardGate = new Promise((resolve) => { resolveCardGate = resolve; });
 
     // 2. 定义流式回调，它只会更新复合消息的 content 部分
     const chatCallback = (plainTextChunk) => {
@@ -157,13 +162,12 @@ export function useChat(options = {}) {
           title: '教案生成中...',
           summary: 'AI正在思考，请稍候'
         };
+        if (resolveCardGate) resolveCardGate({ hasCard: true });
         stopWatch(); // 创建后立刻停止监听，避免重复创建
       }
     });
 
     const streamHandler = (chunk) => {
-      console.log('断点：已进入流式回调');
-      debugger;
       _parseStreamChunk(chunk, (data) => {
         if (data.reply) {
           const normalized = data.reply.replace(/\\n/g, '\n');
@@ -176,8 +180,28 @@ export function useChat(options = {}) {
       lessonPlanStore.endGeneration();
       stopWatch(); // 确保在流程结束时也停止监听
       
+      if (!messages.value[aiMsgIndex].card && lessonPlanStore.isStart) {
+        messages.value[aiMsgIndex].card = {
+          type: 'lesson_plan_card',
+          status: 'loading',
+          temporaryId: _generateTemporaryId(chatHistoryStore),
+          permanentId: null,
+          title: '教案生成中...',
+          summary: 'AI正在思考，请稍候'
+        };
+      }
+
+      if (!messages.value[aiMsgIndex].card) {
+        if (resolveCardGate) resolveCardGate({ hasCard: false });
+      } else {
+        if (resolveCardGate) resolveCardGate({ hasCard: true });
+      }
+
+      await cardGate;
+
       const finalMarkdown = lessonPlanStore.lessonPlanContent;
       if (!finalMarkdown || !messages.value[aiMsgIndex].card) {
+        await saveChatToStorage(userText, messages.value[aiMsgIndex]);
         return;
       }
 
@@ -193,17 +217,15 @@ export function useChat(options = {}) {
           messages.value[aiMsgIndex].card.permanentId = newDocument.id;
           messages.value[aiMsgIndex].card.title = newDocument.title;
           messages.value[aiMsgIndex].card.summary = '教案已生成，点击可进入详情页编辑与查看。';
+          await saveChatToStorage(userText, messages.value[aiMsgIndex]);
         } else {
           throw new Error('后端创建文档失败，未返回有效ID。');
         }
+
       } catch (error) {
         console.error('创建教案文档失败:', error);
         if (messages.value[aiMsgIndex].card) messages.value[aiMsgIndex].card.status = 'error';
       }
-
-      // 本地存储将在后续步骤中改造
-      // await saveChatToStorage(userText, aiResponseMsg);
-
     }, (error) => {
       lessonPlanStore.endGeneration();
       stopWatch();
@@ -220,8 +242,8 @@ export function useChat(options = {}) {
     const aiMsgIndex = _prepareAIMessage();
     const streamHandler = (chunk) => _handleChatModeStream(chunk, aiMsgIndex);
     await _executeApiCall(userText, chatInputRef, streamHandler, async () => {
-      const aiMessage = messages.value[aiMsgIndex].content;
-      await saveChatToStorage(userText, aiMessage);
+      // 改造：传入完整的AI消息对象
+      await saveChatToStorage(userText, messages.value[aiMsgIndex]);
     }, () => {
       messages.value[aiMsgIndex].content = 'AI服务异常';
     });
@@ -276,22 +298,28 @@ export function useChat(options = {}) {
    * @param {string} userText - 用户消息
    * @param {string|Object} aiMessage - AI回复
    */
-  const saveChatToStorage = async (userText, aiMessage) => {
+  const saveChatToStorage = async (userText, aiResponse) => {
     const userId = chatStorageAPI._getUserIdFromToken();
     if (!userId) return;
+
+    // 从完整的AI响应对象中提取文本和卡片信息
+    const aiText = aiResponse.content;
+    const card = aiResponse.card;
 
     if (sessionId.value) {
       const existingChat = chatStorageAPI.loadChatById(userId, sessionId.value);
       if (existingChat) {
-        await chatStorageAPI.continueChat(userId, sessionId.value, userText, aiMessage);
+        // 调用改造后的continueChat，传入card
+        await chatStorageAPI.continueChat(userId, sessionId.value, userText, aiText, card);
       } else {
-        const result = await chatStorageAPI.createNewChat(userId, sessionId.value, userText.substring(0, 20), userText, aiMessage);
+        // 调用改造后的createNewChat，传入card
+        const result = await chatStorageAPI.createNewChat(userId, sessionId.value, userText.substring(0, 20), userText, aiText, card);
         if (result.success) {
           chatHistoryStore.refreshChatList();
         }
       }
     } else {
-      console.log('保存失败');
+      console.log('保存失败: sessionId为空');
     }
   };
 

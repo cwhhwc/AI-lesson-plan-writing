@@ -35,10 +35,11 @@ export function createChatTemplate(sessionId, name = '新对话') {
  * @param {string} ai AI回复内容
  * @returns {Object} 消息对象模板
  */
-export function createMessageTemplate(user = '', ai = '') {
+export function createMessageTemplate(user = '', ai = '', card = null) {
   return {
     user: user,                 // 用户消息
     ai: ai,                     // AI回复
+    card: card,                 // 卡片
     timestamp: Date.now()       // 消息时间戳
   };
 }
@@ -75,6 +76,7 @@ export const CHAT_DATA_EXAMPLE = {
         {
           user: "Vue3怎么使用？",
           ai: "Vue3可以通过...",
+          card: null,
           timestamp: 1703123456789
         }
       ],
