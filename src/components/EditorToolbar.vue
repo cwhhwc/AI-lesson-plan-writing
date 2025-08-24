@@ -1,21 +1,49 @@
 <template>
   <view class="toolbar">
-    <button class="toolbar-button" @click="emitCommand('header', 'H1')">H1</button>
-    <button class="toolbar-button" @click="emitCommand('header', 'H2')">H2</button>
-    <button class="toolbar-button" @click="emitCommand('header', 'H3')">H3</button>
+    <!-- 格式按钮容器 -->
+    <view class="format-button-container">
+      <button class="toolbar-button format-trigger-button" @click="toggleFormatPanel">T</button>
+
+      <!-- 浮动面板 -->
+      <FloatingPanel v-model:show="isFormatPanelVisible" top="42px" left="0">
+        <view class="menu-item" @click="selectFormat('header', 'H1')">一级标题</view>
+        <view class="menu-item" @click="selectFormat('header', 'H2')">二级标题</view>
+        <view class="menu-item" @click="selectFormat('header', 'H3')">三级标题</view>
+        <view class="menu-item" @click="selectFormat('clear')">正文</view>
+      </FloatingPanel>
+    </view>
+
     <button class="toolbar-button" @click="emitCommand('bold')">加粗</button>
-    <button class="toolbar-button" @click="emitCommand('list', 'bullet')">列表</button>
-    <button class="toolbar-button" @click="emitCommand('clear')">正文</button>
+    <button class="toolbar-button" @click="emitCommand('italic')">斜体</button>
+    <button class="toolbar-button" @click="emitCommand('underline')">下划线</button>
+    <button class="toolbar-button" @click="emitCommand('strikethrough')">删除线</button>
+    <button class="toolbar-button" @click="emitCommand('list', 'bullet')">项目符号</button>
+    <button class="toolbar-button" @click="emitCommand('save')">保存</button>
+    <button class="toolbar-button" @click="emitCommand('export')">导出</button>
   </view>
 </template>
 
 <script setup>
-// 1. 定义本组件可以向父组件发出名为 'command' 的事件
+import { ref } from 'vue';
+import FloatingPanel from './FloatingPanel.vue';
+
+// --- 状态管理 ---
+const isFormatPanelVisible = ref(false);
+
+// --- 事件定义 ---
 const emit = defineEmits(['command']);
 
-// 2. 当按钮被点击时，调用此函数
+// --- 方法 ---
+const toggleFormatPanel = () => {
+  isFormatPanelVisible.value = !isFormatPanelVisible.value;
+};
+
+const selectFormat = (name, value = null) => {
+  emitCommand(name, value);
+  isFormatPanelVisible.value = false; // 选择后关闭面板
+};
+
 function emitCommand(name, value) {
-  // 3. 通过 emit 发出事件，并附带一个包含指令名称和值的对象
   emit('command', { name, value });
 }
 </script>
@@ -61,6 +89,27 @@ function emitCommand(name, value) {
 }
 
 .toolbar-button:hover {
+  background-color: #f3f4f6;
+}
+
+/* 新增样式 */
+.format-button-container {
+  position: relative; /* 作为浮动面板的定位锚点 */
+}
+
+.format-trigger-button {
+  font-weight: bold;
+}
+
+.menu-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  white-space: nowrap; /* 防止文字换行 */
+}
+
+.menu-item:hover {
   background-color: #f3f4f6;
 }
 </style>

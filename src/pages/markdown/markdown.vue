@@ -23,6 +23,7 @@ import { storeToRefs } from 'pinia'
 import { useLessonPlanStore } from '@/stores/lessonPlan.js'
 import 'katex/dist/katex.min.css'
 import { renderMarkdown } from '@/utils/renderMarkdown.js'
+import { useAutoSave } from '../../composables/useAutoSave.js'
 
 // 2. 引入刚刚创建的工具栏组件
 import EditorToolbar from '../../components/EditorToolbar.vue'
@@ -34,6 +35,12 @@ const { lessonPlanContent, isStreaming } = storeToRefs(lessonPlanStore)
 // --- 编辑器核心变量 ---
 let editorCtx = null
 const pendingInitialHtml = ref(null)
+const editorContent = ref('') // 用于暂存最新的编辑器内容
+
+// --- 自动保存相关 ---
+const currentDocumentId = ref(null)
+// 从 useAutoSave 中多解构出 saveDocument 函数
+const { isSaving, scheduleAutoSave, latestHtml, saveDocument } = useAutoSave(currentDocumentId)
 
 // --- 编辑器生命周期函数 ---
 const onEditorReady = () => {
@@ -42,9 +49,11 @@ const onEditorReady = () => {
     if (pendingInitialHtml.value !== null) {
       editorCtx.setContents({ html: pendingInitialHtml.value })//富文本编辑器中设置内容
       pendingInitialHtml.value = null
+      latestHtml.value = ''
     } else if (lessonPlanContent.value) {
       const initialHtml = renderMarkdown(lessonPlanContent.value)
       editorCtx.setContents({ html: initialHtml })
+      latestHtml.value = initialHtml
     }
   }).exec()
 }
@@ -52,7 +61,10 @@ const onEditorReady = () => {
 // --- 核心数据流逻辑 ---
 const onEditorInput = (e) => {
   if (isStreaming.value) return
-  lessonPlanStore.lessonPlanContent = e.detail.html
+  const currentHtml = e.detail.html;
+  editorContent.value = currentHtml; // 更新暂存的内容
+  lessonPlanStore.lessonPlanContent = currentHtml
+  scheduleAutoSave(currentHtml)
 }
 
 watch(lessonPlanContent, (newMarkdown, oldMarkdown) => {
@@ -66,7 +78,9 @@ watch(lessonPlanContent, (newMarkdown, oldMarkdown) => {
 const handleToolbarCommand = (command) => {
   if (!editorCtx) return
 
-  if (command.name === 'clear') {
+  if (command.name === 'save') {
+    saveDocument(editorContent.value); // 调用手动保存
+  } else if (command.name === 'clear') {
     editorCtx.removeFormat()
   } else {
     editorCtx.format(command.name, command.value || '')
@@ -86,6 +100,8 @@ async function loadDocumentIfNeeded(options) {
       } else {
         pendingInitialHtml.value = html
       }
+      latestHtml.value = html
+      editorContent.value = html // 初始化时也更新暂存内容
     } else {
       uni.showToast({ title: '未找到教案或无权限', icon: 'none' })
     }
@@ -96,6 +112,7 @@ async function loadDocumentIfNeeded(options) {
 
 onLoad((options) => {
   loadDocumentIfNeeded(options)
+  currentDocumentId.value = options && options.id ? options.id : null
 })
 </script>
 

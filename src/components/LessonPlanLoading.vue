@@ -22,9 +22,7 @@
 </template>
 
 <script setup>
-// 1. 移除所有不再需要的import
-
-// 2. 定义props，接收来自父组件的卡片数据
+// 定义props，接收来自父组件的卡片数据
 const props = defineProps({
   cardData: {
     type: Object,
@@ -32,7 +30,7 @@ const props = defineProps({
   }
 });
 
-// 3. 移除ID生成逻辑，重写跳转逻辑
+// 移除ID生成逻辑，重写跳转逻辑
 const handleNavigateToMarkdown = () => {
   // 如果教案已经保存并获得了永久ID，则使用永久ID跳转
   if (props.cardData.permanentId) {
