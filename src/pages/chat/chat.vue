@@ -3,10 +3,11 @@
   <view class="chat-container" @click="handlePageClick">
     <!-- 消息列表区域 -->
     <ChatMessageList 
+      ref="messageListRef"
       :messages="messages"
       @new-chat="handleNewChat"
+      v-model:isAtBottom="chatListIsAtBottom"
       class="messages-area"
-      ref="messageListRef"
     />
     
     <!-- 底部输入区域的容器 -->
@@ -27,17 +28,22 @@
     </view>
     
     <!-- 会话列表面板 -->
-    <ChatHistoryPanel 
+    <ReusablePanel
       v-if="isHistoryPanelVisible"
-      @click.stop
-      @select-chat="handleSelectChat"
+      title="会话列表"
+      :items="chatHistoryStore.getChatList"
+      :is-loading="chatHistoryStore.getIsLoading"
+      @select-item="handleSelectChat"
+      @rename-item="handleRenameItem"
+      @delete-item="handleDeleteItem"
       @close="handleHistoryPanelClose"
-      @clear-messages="handleClearMessages"
+      @click.stop
     />
     
     <!-- 回到底部按钮 -->
     <ScrollToBottom
-      v-show="!isAtBottom"
+      v-show="!chatListIsAtBottom"
+      @request-scroll="handleScrollToBottom"
       class="scroll-to-bottom"
     />
   </view>
@@ -46,20 +52,23 @@
 <script setup>
 import { ref, nextTick, onMounted, provide } from 'vue';
 import ChatMessageList from '@/components/ChatMessageList.vue';
-import ChatHistoryPanel from '@/components/ChatHistoryPanel.vue';
 import ScrollToBottom from '@/components/ScrollToBottom.vue';
 import ChatInput from '@/components/ChatInput.vue';
 import InputOptionsPanel from '@/components/InputOptionsPanel.vue';
-import { setupBottomDetection, checkScrollPosition } from '@/utils/scrollDetection.js';
+import ReusablePanel from '@/components/ReusablePanel.vue';
 import { useChat } from '@/composables/useChat.js';
 import { updateNavigationTitle } from '@/utils/titleManager.js';
+import {useChatHistoryStore } from '@/stores/chatHistory.js'
 
 // --- 状态管理 ---
 // 面板可见性状态
 const isOptionsPanelVisible = ref(false);
 const isHistoryPanelVisible = ref(false);
-const isAtBottom = ref(true); // 滚动状态
+const chatListIsAtBottom = ref(true); // 用于和子组件v-model绑定的滚动状态
 const isWriteMode = ref(false); // 教案模式状态
+
+//聊天历史store
+const chatHistoryStore = useChatHistoryStore();
 
 // --- 组件引用 ---
 // ChatInput 组件引用
@@ -68,7 +77,7 @@ const chatInputRef = ref(null);
 const messageListRef = ref(null);
 
 // --- 依赖注入 ---
-// 提供messageListRef给子组件使用
+// 提供messageListRef给子组件使用 (此行可酌情保留或删除，取决于是否有其他子组件需要)
 provide('messageListRef', messageListRef);
 
 // --- 组合式函数 ---
@@ -80,9 +89,7 @@ const {
   handleSendMessage: handleSendMessageCore,
 } = useChat({
   onTokenInvalid: () => {},
-  onScrollCheck: () => {
-    isAtBottom.value = checkScrollPosition(messageListRef);
-  },
+  // onScrollCheck 已不再需要，由ChatMessageList内部处理
   isWriteMode: isWriteMode // 将isWriteMode状态传入useChat
 });
 
@@ -109,8 +116,10 @@ const handleNewChat = () => {
   handleNewChatCore(chatInputRef.value);
 };
 
-// 处理会话选择
-const handleSelectChat = (selectedSessionId) => {
+// 处理会话选择（接收整个 item 对象）
+const handleSelectChat = (item) => {
+  const selectedSessionId = item?.id;
+  if (!selectedSessionId) return;
   handleSelectChatCore(selectedSessionId);
   isHistoryPanelVisible.value = false; // 选择后关闭面板
 };
@@ -150,9 +159,34 @@ const handleHistoryPanelClose = () => {
   isHistoryPanelVisible.value = false;
 };
 
+// 处理重命名会话（接收 { item, newName }）
+const handleRenameItem = (renameData) => {
+  const sessionId = renameData?.item?.id;
+  const newName = renameData?.newName?.trim();
+  if (!sessionId || !newName) return;
+  chatHistoryStore.renameChat(sessionId, newName);
+};
+
+// 处理删除会话（接收整个 item 对象）
+const handleDeleteItem = (item) => {
+  const sessionId = item?.id;
+  if (!sessionId) return;
+
+  const wasCurrent = chatHistoryStore.getCurrentSessionId === sessionId;
+  chatHistoryStore.deleteChat(sessionId);
+  if (wasCurrent) {
+    handleClearMessages();
+  }
+};
 // 处理清空消息
 const handleClearMessages = () => {
   handleNewChat();
+};
+
+// 处理滚动到底部的请求
+const handleScrollToBottom = () => {
+  // 直接调用子组件暴露出的API
+  messageListRef.value?.scrollToBottom();
 };
 
 // 统一的页面点击处理器，用于关闭所有打开的面板
@@ -168,11 +202,10 @@ const handlePageClick = () => {
 // --- 生命周期钩子 ---
 // 组件挂载后设置
 onMounted(() => {
+  // 初始化会话列表，确保刷新后能看到历史记录
+  chatHistoryStore.initializeChatList();
+  // 滚动相关的监听已全部移入ChatMessageList组件，此处不再需要
   nextTick(() => {
-    setupBottomDetection(messageListRef, (atBottom) => {
-      isAtBottom.value = atBottom;
-    });
-    isAtBottom.value = checkScrollPosition(messageListRef);
     updatePageTitle(); // 初始化页面标题
   });
 });

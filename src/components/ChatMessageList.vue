@@ -26,7 +26,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch, onUnmounted } from 'vue';
 import ChatBubble from '@/components/ChatBubble.vue';
 import NewChatButton from '@/components/NewChatButton.vue';
 import { renderMarkdown } from '@/utils/renderMarkdown.js';
@@ -40,15 +40,82 @@ const props = defineProps({
 });
 
 // 定义emits
-const emit = defineEmits(['new-chat']);
+const emit = defineEmits(['new-chat', 'update:isAtBottom']);
+
+// --- 滚动相关逻辑 --- 
+
+// 内部状态：管理是否在底部
+const isAtBottom = ref(true);
+
+// DOM 引用：获取组件根元素，用于后续查询
+const messagesContainer = ref(null);
+let scrollableElement = null; // 用于存储真正的滚动DOM节点，提升作用域以便onUnmounted能访问
+
+// 内部方法：检查滚动位置
+const checkScrollPosition = () => {
+  const el = scrollableElement;
+  if (el) {
+    const isScrolledToBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 5;
+    isAtBottom.value = isScrolledToBottom;
+    return isScrolledToBottom;
+  }
+  return true;
+};
+
+// 公共API：滚动到底部
+const scrollToBottom = () => {
+  const el = scrollableElement;
+  if (el) {
+    el.scrollTo({
+      top: el.scrollHeight,
+      behavior: 'smooth'
+    });
+  }
+};
+
+// 监听isAtBottom状态的变化，并通过emit通知父组件
+watch(isAtBottom, (newValue) => {
+  emit('update:isAtBottom', newValue);
+});
+
+// 组件挂载后，设置滚动监听器
+onMounted(() => {
+  // 使用被验证过的可靠方式获取滚动DOM节点
+  if (messagesContainer.value && messagesContainer.value.$el) {
+    scrollableElement = messagesContainer.value.$el.querySelector('.messages-content');
+  }
+  
+  console.log('找到的滚动元素 scrollableElement:', scrollableElement);
+
+  if (scrollableElement) {
+    scrollableElement.addEventListener('scroll', checkScrollPosition);
+    // 初始检查一次
+    checkScrollPosition();
+  } else {
+    console.error('未能找到滚动容器 .messages-content');
+  }
+});
+
+// 组件卸载前，清理事件监听器
+onUnmounted(() => {
+  if (scrollableElement) {
+    // 在组件卸载时，移除事件监听器，防止内存泄漏
+    scrollableElement.removeEventListener('scroll', checkScrollPosition);
+  }
+});
+
+// 通过defineExpose暴露API
+defineExpose({
+  scrollToBottom
+});
+
+// --- 其他业务逻辑 ---
 
 // 处理新建会话
 const handleNewChat = () => {
   emit('new-chat');
 };
 
-// 消息容器引用
-const messagesContainer = ref(null);
 </script>
 
 <style scoped>

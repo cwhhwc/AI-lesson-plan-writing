@@ -115,6 +115,32 @@ export const useChatHistoryStore = defineStore('chatHistory', {
     // 触发刷新（供外部调用）
     async triggerRefresh() {
       await this.refreshChatList();
+    },
+    
+    // 重命名会话
+    renameChat(sessionId, newName) {
+      const chat = this.chatList.find(c => c.id === sessionId);
+      if (!chat) return;
+      chat.name = newName;
+      // 调用API更新后端/本地存储
+      const userId = chatStorageAPI._getUserIdFromToken();
+      if (!userId) return;
+      chatStorageAPI.updateChatName(userId, sessionId, newName);
+    },
+
+    // 删除会话
+    deleteChat(sessionId) {
+      this.chatList = this.chatList.filter(c => c.id !== sessionId);
+      // 调用API从后端/本地存储删除
+      const userId = chatStorageAPI._getUserIdFromToken();
+      chatStorageAPI.deleteChat(userId, sessionId);
+
+      if (this.currentSessionId === sessionId) {
+        this.clearCurrentSession();
+      }
+      if (this.selectedSessionId === sessionId) {
+        this.clearSelectedChat();
+      }
     }
   }
 });

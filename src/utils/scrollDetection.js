@@ -1,27 +1,7 @@
 /**
  * 滚动检测工具
- * 提供滚动位置检测和状态管理功能
+ * 提供滚动位置检测和DOM操作功能
  */
-
-import { useChatOptionsStore } from '@/stores/chatOptionsPanel.js';
-
-/**
- * 公共函数：检查滚动位置并更新状态
- * @param {HTMLElement} scrollableElement - 可滚动的DOM元素
- * @returns {boolean} 是否在底部
- */
-export const updateScrollState = (scrollableElement) => {
-  if (scrollableElement) {
-    const { scrollTop, scrollHeight, clientHeight } = scrollableElement;
-    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 5; // 5px容差
-    
-    // 通过store更新滚动状态
-    const chatOptionsStore = useChatOptionsStore();
-    chatOptionsStore.setScrollPosition(isAtBottom);
-    return isAtBottom;
-  }
-  return true; // 默认认为在底部
-};
 
 /**
  * 获取可滚动元素
@@ -30,33 +10,47 @@ export const updateScrollState = (scrollableElement) => {
  */
 export const getScrollableElement = (messageListRef) => {
   if (messageListRef?.value) {
+    // uniapp的组件引用需要通过$el访问真实DOM
     const messagesArea = messageListRef.value.$el;
+    // 尝试获取内部的滚动容器，如果不存在则使用组件根元素
     return messagesArea?.querySelector?.('.messages-content') || messagesArea;
   }
   return null;
 };
 
 /**
- * 设置滚动监听器
+ * 检查当前是否滚动到底部
  * @param {Object} messageListRef - 消息列表组件的引用
- */
-export const setupBottomDetection = (messageListRef) => {
-  const scrollableElement = getScrollableElement(messageListRef);
-  
-  if (scrollableElement?.addEventListener) {
-    scrollableElement.addEventListener('scroll', (event) => {
-      updateScrollState(event.target);
-    });
-  }
-};
-
-/**
- * 检查当前滚动位置并更新状态
- * @param {Object} messageListRef - 消息列表组件的引用
+ * @returns {boolean} 是否在底部
  */
 export const checkScrollPosition = (messageListRef) => {
   const scrollableElement = getScrollableElement(messageListRef);
-  updateScrollState(scrollableElement);
+  if (scrollableElement) {
+    const { scrollTop, scrollHeight, clientHeight } = scrollableElement;
+    // 增加5px的容差，避免像素计算不精确导致的问题
+    return scrollTop + clientHeight >= scrollHeight - 5;
+  }
+  // 如果元素不存在，默认在底部
+  return true;
+};
+
+/**
+ * 设置滚动监听器
+ * @param {Object} messageListRef - 消息列表组件的引用
+ * @param {Function} updateCallback - 滚动时调用的回调函数，接收一个布尔值参数 (isAtBottom)
+ */
+export const setupBottomDetection = (messageListRef, updateCallback) => {
+  const scrollableElement = getScrollableElement(messageListRef);
+  
+  if (scrollableElement?.addEventListener) {
+    scrollableElement.addEventListener('scroll', () => {
+      // 在滚动时，重新计算位置并通过回调函数通知外部
+      const isAtBottom = checkScrollPosition(messageListRef);
+      if (updateCallback) {
+        updateCallback(isAtBottom);
+      }
+    });
+  }
 };
 
 /**
@@ -75,10 +69,5 @@ export const scrollToBottom = (messageListRef) => {
       top: targetScrollTop,
       behavior: 'smooth'
     });
-    
-    // 滚动完成后更新状态
-    setTimeout(() => {
-      updateScrollState(scrollableElement);
-    }, 200); // 等待滚动动画完成
   }
 };

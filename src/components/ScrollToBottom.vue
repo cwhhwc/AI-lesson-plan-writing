@@ -1,5 +1,5 @@
 <template>
-  <view class="scroll-to-bottom" @tap="handleScrollToBottom" v-show="show">
+  <view class="scroll-to-bottom" @tap="handleClick">
     <view class="scroll-icon">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <!-- 向下箭头 -->
@@ -11,24 +11,12 @@
 </template>
 
 <script setup>
-import { computed, inject } from 'vue';
-import { useChatOptionsStore } from '@/stores/chatOptionsPanel.js';
-import { scrollToBottom } from '@/utils/scrollDetection.js';
+// 定义组件要发出的事件
+const emit = defineEmits(['request-scroll']);
 
-// 使用Pinia store
-const chatOptionsStore = useChatOptionsStore();
-
-// 注入messageListRef
-const messageListRef = inject('messageListRef');
-
-// 计算属性：根据store状态控制显示
-const show = computed(() => !chatOptionsStore.isAtBottom);
-
-// 点击滚动到底部
-const handleScrollToBottom = () => {
-  if (messageListRef) {
-    scrollToBottom(messageListRef);
-  }
+// 点击时，向父组件发出滚动请求
+const handleClick = () => {
+  emit('request-scroll');
 };
 </script>
 
@@ -95,4 +83,4 @@ const handleScrollToBottom = () => {
     height: 120rpx;
   }
 }
-</style> 
+</style>
