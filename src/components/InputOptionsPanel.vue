@@ -2,10 +2,6 @@
 <script setup>
 import { ref } from 'vue';
 import IconOption from './IconOption.vue';
-import { useChatOptionsStore } from '@/stores/chatOptionsPanel.js';
-
-// 使用 Pinia Store
-const chatOptionsStore = useChatOptionsStore();
 
 // 内部管理选项配置
 const options = ref([
@@ -16,6 +12,10 @@ const options = ref([
   {
     text: '写教案',
     iconClass: 'write-icon'
+  },
+  {
+    text: '我的文件',
+    iconClass: 'file-icon'
   }
   // 可以在这里轻松添加更多选项
   // {
@@ -48,7 +48,7 @@ const handlePanelClick = (e) => {
         v-for="(option, index) in options" 
         :key="index"
         :text="option.text"
-        @click="handleOptionClick(option, index)"
+        @click.stop="handleOptionClick(option, index)"
       >
         <template #icon>
           <view class="svg-icon" :class="option.iconClass"></view>
@@ -97,6 +97,10 @@ const handlePanelClick = (e) => {
 
 .note-icon {
   background: url('data:image/svg+xml;utf8,<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 4h16v24l-4-3-4 3-4-3-4 3V4z" stroke="%23666" stroke-width="2" fill="none"/><path d="M12 12h8M12 16h8M12 20h4" stroke="%23666" stroke-width="2" stroke-linecap="round"/></svg>') no-repeat center/contain;
+}
+
+.file-icon {
+  background: url('data:image/svg+xml;utf8,<svg t="1756024347460" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1783" width="32" height="32"><path d="M300.8 202.666667l-12.8 64h-42.666667v640h533.333334v-640h-42.666667l-12.8-64h119.466667v768h-661.333334v-768h119.466667zM554.666667 640v64H320v-64h234.666667z m149.333333-170.666667v64H320v-64h384zM512 53.333333A96 96 0 0 1 608 149.333333v10.666667h58.24l34.133333 170.666667H323.626667l34.133333-170.666667h58.24V149.333333A96 96 0 0 1 512 53.333333z m0 64A32 32 0 0 0 480 149.333333v74.666667h-69.76l-8.533333 42.666667h220.586666l-8.533333-42.666667H544V149.333333A32 32 0 0 0 512 117.333333z" fill="black" p-id="1784"></path></svg>') no-repeat center/contain;
 }
 
 .settings-icon {

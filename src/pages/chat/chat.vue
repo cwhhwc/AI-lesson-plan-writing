@@ -9,17 +9,27 @@
       ref="messageListRef"
     />
     
-    <!-- 底部输入栏 -->
-    <ChatInput 
-      ref="chatInputRef"
-      @send-message="handleSendMessage"
-      class="input-area"
-    />
+    <!-- 底部输入区域的容器 -->
+    <view class="input-section-wrapper">
+      <!-- 选项面板 -->
+      <InputOptionsPanel
+        v-if="isOptionsPanelVisible"
+        @option-click="handleSelectOption"
+        @click.stop
+      />
+      <!-- 底部输入栏 -->
+      <ChatInput 
+        ref="chatInputRef"
+        @send-message="handleSendMessage"
+        @toggle-options-panel="handleToggleOptionsPanel"
+        @click.stop
+      />
+    </view>
     
     <!-- 会话列表面板 -->
     <ChatHistoryPanel 
-      v-show="chatOptionsStore.showHistoryPanel"
-      @click="(e) => e.stopPropagation()"
+      v-if="isHistoryPanelVisible"
+      @click.stop
       @select-chat="handleSelectChat"
       @close="handleHistoryPanelClose"
       @clear-messages="handleClearMessages"
@@ -27,7 +37,7 @@
     
     <!-- 回到底部按钮 -->
     <ScrollToBottom
-      v-show="!chatOptionsStore.isAtBottom"
+      v-show="!isAtBottom"
       class="scroll-to-bottom"
     />
   </view>
@@ -38,41 +48,62 @@ import { ref, nextTick, onMounted, provide } from 'vue';
 import ChatMessageList from '@/components/ChatMessageList.vue';
 import ChatHistoryPanel from '@/components/ChatHistoryPanel.vue';
 import ScrollToBottom from '@/components/ScrollToBottom.vue';
-import { useChatOptionsStore } from '@/stores/chatOptionsPanel.js';
 import ChatInput from '@/components/ChatInput.vue';
+import InputOptionsPanel from '@/components/InputOptionsPanel.vue';
 import { setupBottomDetection, checkScrollPosition } from '@/utils/scrollDetection.js';
 import { useChat } from '@/composables/useChat.js';
-import LessonPlanLoading from '@/components/LessonPlanLoading.vue';
+import { updateNavigationTitle } from '@/utils/titleManager.js';
 
-// 使用 Pinia Store
-const chatOptionsStore = useChatOptionsStore();
+// --- 状态管理 ---
+// 面板可见性状态
+const isOptionsPanelVisible = ref(false);
+const isHistoryPanelVisible = ref(false);
+const isAtBottom = ref(true); // 滚动状态
+const isWriteMode = ref(false); // 教案模式状态
 
+// --- 组件引用 ---
 // ChatInput 组件引用
 const chatInputRef = ref(null);
-
 // ChatMessageList 组件引用
 const messageListRef = ref(null);
 
+// --- 依赖注入 ---
 // 提供messageListRef给子组件使用
 provide('messageListRef', messageListRef);
 
+// --- 组合式函数 ---
 // 使用聊天 Composable
 const {
   messages,
-  sessionId,
   handleNewChat: handleNewChatCore,
   handleSelectChat: handleSelectChatCore,
   handleSendMessage: handleSendMessageCore,
-  handleTokenInvalid
 } = useChat({
-  onTokenInvalid: () => {
-    // Token失效时的额外处理（如果需要）
-  },
+  onTokenInvalid: () => {},
   onScrollCheck: () => {
-    checkScrollPosition(messageListRef);
-  }
+    isAtBottom.value = checkScrollPosition(messageListRef);
+  },
+  isWriteMode: isWriteMode // 将isWriteMode状态传入useChat
 });
 
+// --- 辅助函数 ---
+// 更新导航栏标题 (从 store 的逻辑迁移而来)
+const updatePageTitle = () => {
+  const modeConfig = { isWriteMode: '写教案模式' };
+  const currentState = { isWriteMode: isWriteMode.value };
+  updateNavigationTitle(modeConfig, currentState);
+};
+
+// 设置模式 (从 store 的逻辑迁移而来)
+const setMode = (modeName, value) => {
+  if (modeName === 'isWriteMode') {
+    isWriteMode.value = value;
+  }
+  // 如果未来有其他模式，也在这里处理
+  updatePageTitle();
+};
+
+// --- 事件处理 ---
 // 处理新建会话
 const handleNewChat = () => {
   handleNewChatCore(chatInputRef.value);
@@ -81,6 +112,7 @@ const handleNewChat = () => {
 // 处理会话选择
 const handleSelectChat = (selectedSessionId) => {
   handleSelectChatCore(selectedSessionId);
+  isHistoryPanelVisible.value = false; // 选择后关闭面板
 };
 
 // 处理发送消息
@@ -88,31 +120,60 @@ const handleSendMessage = (text) => {
   handleSendMessageCore(text, chatInputRef.value);
 };
 
+// 切换选项面板的可见性
+const handleToggleOptionsPanel = () => {
+  // 选项面板和历史面板互斥
+  if (isHistoryPanelVisible.value) {
+    isHistoryPanelVisible.value = false;
+  }
+  isOptionsPanelVisible.value = !isOptionsPanelVisible.value;
+};
+
+// 处理来自选项面板的点击
+const handleSelectOption = (option) => {
+  isOptionsPanelVisible.value = false; // 首先关闭面板
+  switch (option.text) {
+    case '聊天记录':
+      isHistoryPanelVisible.value = true;
+      break;
+    case '写教案':
+      setMode('isWriteMode', !isWriteMode.value);
+      break;
+    case '我的文件':
+      uni.showToast({ title: '选择了“我的文件”', icon: 'none' });
+      break;
+  }
+};
+
 // 处理历史面板关闭
 const handleHistoryPanelClose = () => {
-  chatOptionsStore.closeHistoryPanel();
-  chatOptionsStore.toggleOptionsPanel(); // 关闭历史面板时显示选项面板
+  isHistoryPanelVisible.value = false;
 };
 
 // 处理清空消息
 const handleClearMessages = () => {
-  // 清空当前会话ID和消息列表
   handleNewChat();
 };
 
-// 使用通用页面点击处理器，统一管理所有面板
-const handlePageClick = (e) => {
-  chatOptionsStore.handlePageClick(e);
+// 统一的页面点击处理器，用于关闭所有打开的面板
+const handlePageClick = () => {
+  if (isOptionsPanelVisible.value) {
+    isOptionsPanelVisible.value = false;
+  }
+  if (isHistoryPanelVisible.value) {
+    isHistoryPanelVisible.value = false;
+  }
 };
 
-// 组件挂载后设置底部检测
+// --- 生命周期钩子 ---
+// 组件挂载后设置
 onMounted(() => {
   nextTick(() => {
-    setupBottomDetection(messageListRef);
-    // 初始检查滚动位置
-    checkScrollPosition(messageListRef);
-    // 初始化导航栏标题
-    chatOptionsStore.updateTitle();
+    setupBottomDetection(messageListRef, (atBottom) => {
+      isAtBottom.value = atBottom;
+    });
+    isAtBottom.value = checkScrollPosition(messageListRef);
+    updatePageTitle(); // 初始化页面标题
   });
 });
 </script>
@@ -134,12 +195,16 @@ onMounted(() => {
   padding-bottom: 180rpx;
 }
 
-.input-area {
-  flex-shrink: 0;
+.input-section-wrapper {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
 }
 
 .scroll-to-bottom {
   position: fixed;
   bottom: 190rpx;
 }
-</style> 
+</style>

@@ -5,7 +5,6 @@ import chatStorageAPI from '@/utils/chatStorageService.js';
 import { removeToken } from '@/utils/token.js';
 import { useChatHistoryStore } from '@/stores/chatHistory.js';
 import { useLessonPlanStore } from '@/stores/lessonPlan.js';
-import { useChatOptionsStore } from '@/stores/chatOptionsPanel.js';
 
 /**
  * [内部辅助函数] 生成唯一的临时ID，用于在获取到永久ID前占位
@@ -26,17 +25,17 @@ const _generateTemporaryId = (chatHistoryStore) => {
  * @param {Object} options - 配置选项
  * @param {Function} options.onTokenInvalid - Token失效回调
  * @param {Function} options.onScrollCheck - 滚动位置检查回调
+ * @param {Boolean} options.isWriteMode - 是否是写教案模式
  * @returns {Object} 聊天相关的状态和方法
  */
 export function useChat(options = {}) {
-  const { onTokenInvalid, onScrollCheck } = options;
+  const { onTokenInvalid, onScrollCheck, isWriteMode } = options;
   
   const messages = ref([]);
   const sessionId = ref('');
   
   const chatHistoryStore = useChatHistoryStore();
   const lessonPlanStore = useLessonPlanStore();
-  const chatOptionsStore = useChatOptionsStore();
   
   /**
    * 处理新建会话
@@ -124,7 +123,7 @@ export function useChat(options = {}) {
    * @param {Object} chatInputRef - 聊天输入组件引用
    */
   const receiveAIMessage = async (userText, chatInputRef) => {
-    if (chatOptionsStore.isWriteMode) {
+    if (isWriteMode) {
       await _handleLessonModeFlow(userText, chatInputRef);
     } else {
       await _handleChatModeFlow(userText, chatInputRef);

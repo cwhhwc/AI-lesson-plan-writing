@@ -1,7 +1,7 @@
 <template>
   <view class="chat-input-wrapper">
     <!-- 输入框 -->
-    <view class="chat-input-bar" @click="handlePanelClick">
+    <view class="chat-input-bar">
       <view class="input-container">
         <textarea 
           class="chat-input" 
@@ -15,7 +15,7 @@
           :maxlength="1000"
          />
         <!-- 加号按钮 -->
-        <view class="plus-btn" @tap="toggleOptionsPanel">
+        <view class="plus-btn" @tap.stop="toggleOptionsPanel">
           <view class="plus-icon"></view>
         </view>
       </view>
@@ -24,50 +24,23 @@
         <view class="send-arrow"></view>
       </view>
     </view>
-        
-        <!-- 输入选项面板 -->
-        <InputOptionsPanel 
-          v-show="chatOptionsStore.showOptionsPanel"
-          @option-click="handlePanelOptionClick"
-          @click="handlePanelClick"
-        />
   </view>
 </template>
 
 <script setup>
 import { ref } from 'vue';
-import InputOptionsPanel from './InputOptionsPanel.vue';
-import { useChatOptionsStore } from '@/stores/chatOptionsPanel.js';
 
-// 使用 Pinia Store
-const chatOptionsStore = useChatOptionsStore();
+// 定义emit事件
+const emit = defineEmits(['send-message', 'toggle-options-panel']);
 
 // 本地状态
 const inputValue = ref('');
 const isSending = ref(false);
 
-// 打开选项面板
-const toggleOptionsPanel = (e) => {
-  e?.stopPropagation();
-  // 如果历史面板打开，则不允许打开选项面板
-  if (chatOptionsStore.showHistoryPanel) {
-    return;
-  }
-  chatOptionsStore.showOptionsPanel = true;
+// 打开选项面板的请求
+const toggleOptionsPanel = () => {
+  emit('toggle-options-panel');
 };
-
-// 选项面板点击事件
-const handlePanelOptionClick = (option, index) => {
-  chatOptionsStore.handleOption(option, index);
-};
-
-// 防止选项面板关闭
-const handlePanelClick = (e) => {
-  e.stopPropagation();
-};
-
-// 发送消息事件
-const emit = defineEmits(['send-message']);
 
 // 处理发送消息
 const handleSend = () => {
@@ -93,11 +66,6 @@ defineExpose({
 
 <style scoped>
 .chat-input-wrapper {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
   background: #fff;
 }
 
