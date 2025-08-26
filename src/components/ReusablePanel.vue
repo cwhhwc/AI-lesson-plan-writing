@@ -24,23 +24,14 @@
         <text>暂无记录</text>
       </view>
       
-      <!-- 项目列表 -->
-      <ReusableItem 
-        v-else
-        v-for="item in items" 
-        :key="item.id"
-        :item="item"
-        @select-item="handleSelectItem"
-        @rename-item="handleRenameItem"
-        @delete-item="handleDeleteItem"
-      />
+      <!-- 列表内容由父组件通过插槽提供 -->
+      <slot v-else></slot>
+
     </view>
   </view>
 </template>
 
 <script setup>
-import ReusableItem from '@/components/ReusableItem.vue';
-
 // 定义props
 const props = defineProps({
   title: {
@@ -58,26 +49,11 @@ const props = defineProps({
 });
 
 // 定义emit事件
-const emit = defineEmits(['select-item', 'rename-item', 'delete-item', 'close']);
+const emit = defineEmits(['close']);
 
 // 处理返回按钮点击
 const handleBack = () => {
   emit('close');
-};
-
-// 处理项目选择，直接将事件和数据向上抛出
-const handleSelectItem = (item) => {
-  emit('select-item', item);
-};
-
-// 处理项目重命名，直接将事件和数据向上抛出
-const handleRenameItem = (renameData) => {
-  emit('rename-item', renameData);
-};
-
-// 处理项目删除，直接将事件和数据向上抛出
-const handleDeleteItem = (item) => {
-  emit('delete-item', item);
 };
 </script>
 

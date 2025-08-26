@@ -1,178 +1,112 @@
 <!-- src/components/ChatHistoryItem.vue -->
-<!-- 会话选项组件 -->
-
+<!-- 封装了会话列表项所有交互逻辑的特定组件 -->
 <template>
-  <view class="chat-history-item" @tap="handleItemClick">
-    <!-- 正常模式 -->
-    <view v-if="!isDeleting" class="chat-item-content">
-      <!-- 正常模式：显示标题 -->
-      <text v-if="!isRenaming" class="chat-item-title">{{ title }}</text>
-      <!-- 重命名模式：显示输入框 -->
-      <input 
-        v-else 
-        v-model="editingTitle" 
-        class="chat-item-input"
-        @blur="handleInputBlur"
-        @keyup.enter="handleConfirmRename"
-        :focus="isRenaming"
-        :auto-focus="true"
-      />
-    </view>
-    <view v-if="!isDeleting" class="chat-item-actions">
-      <!-- 正常模式：重命名和删除按钮 -->
-      <view v-if="!isRenaming" class="action-icon rename-icon" @tap.stop="handleRename">
-        <view class="icon-inner"></view>
-      </view>
-      <view v-if="!isRenaming" class="action-icon delete-icon" @tap.stop="handleDelete">
-        <view class="icon-inner"></view>
-      </view>
-      
-      <!-- 重命名模式：确认和取消按钮 -->
-      <view v-if="isRenaming" class="action-icon confirm-icon" @tap.stop="handleConfirmRename">
-        <view class="icon-inner"></view>
-      </view>
-      <view v-if="isRenaming" class="action-icon cancel-icon" @tap.stop="handleCancelRename">
-        <view class="icon-inner"></view>
-      </view>
-    </view>
+  <view class="chat-history-item-wrapper">
+    <ReusableItem :item="item" @select-item="$emit('select-item', item)">
+      <!-- 定义内容区域的具体实现 -->
+      <template #content>
+        <!-- 重命名模式：显示输入框 -->
+        <input 
+          v-if="isRenaming" 
+          v-model="editingTitle" 
+          class="chat-item-input"
+          @blur="handleInputBlur"
+          @keyup.enter="handleConfirmRename"
+          :focus="isRenaming"
+          :auto-focus="true"
+          @tap.stop
+        />
+        <!-- 正常模式：显示标题 -->
+        <text v-else class="chat-item-title">{{ item.name }}</text>
+      </template>
+
+      <!-- 定义操作区域的具体实现 -->
+      <template #actions>
+        <!-- 重命名模式：确认和取消按钮 -->
+        <template v-if="isRenaming">
+          <view class="action-icon confirm-icon" @tap.stop="handleConfirmRename">
+            <view class="icon-inner"></view>
+          </view>
+          <view class="action-icon cancel-icon" @tap.stop="handleCancelRename">
+            <view class="icon-inner"></view>
+          </view>
+        </template>
+        <!-- 正常模式：重命名和删除按钮 -->
+        <template v-else>
+          <view class="action-icon rename-icon" @tap.stop="handleRename">
+            <view class="icon-inner"></view>
+          </view>
+          <view class="action-icon delete-icon" @tap.stop="handleDelete">
+            <view class="icon-inner"></view>
+          </view>
+        </template>
+      </template>
+    </ReusableItem>
     
-    <!-- 删除模式 -->
-    <view v-if="isDeleting" class="delete-mode-container">
-      <view class="delete-confirm" @tap.stop="handleConfirmDelete">
-        <text class="delete-text">确认删除</text>
-      </view>
-      <view class="delete-cancel" @tap.stop="handleCancelDelete">
-        <text class="cancel-text">取消</text>
-      </view>
+    <!-- 删除确认UI，现在相对于wrapper绝对定位 -->
+    <view v-if="isDeleting" class="delete-mode-container" @tap.stop>
+        <view class="delete-confirm" @tap.stop="handleConfirmDelete">
+          <text class="delete-text">确认删除</text>
+        </view>
+        <view class="delete-cancel" @tap.stop="handleCancelDelete">
+          <text class="cancel-text">取消</text>
+        </view>
     </view>
-    
-    <!-- 删除模式遮罩层 -->
-    <view v-if="isDeleting" class="delete-overlay" @tap.stop="handleCancelDelete"></view>
   </view>
 </template>
 
 <script setup>
 import { ref } from 'vue';
-import chatStorageAPI from '@/utils/chatStorageService.js';
+import ReusableItem from './ReusableItem.vue';
 
-// 定义props
+// 定义props，接收来自父组件的item数据
 const props = defineProps({
-  title: {
-    type: String,
-    default: '会话标题'
-  },
-  sessionId: {
-    type: String,
-    default: ''
+  item: {
+    type: Object,
+    required: true
   }
 });
 
-// 定义emit事件
-const emit = defineEmits(['select-chat', 'chat-renamed', 'chat-deleted']);
+// 定义emit事件，与旧版 ReusableItem 保持一致
+const emit = defineEmits(['select-item', 'rename-item', 'delete-item']);
 
-// 状态管理
+// 状态管理：所有交互状态都封装在本组件内
 const isRenaming = ref(false);
 const editingTitle = ref('');
 const isDeleting = ref(false);
 
-const handleItemClick = () => {
-  // 如果正在重命名或删除，不触发选择事件
-  if (isRenaming.value || isDeleting.value) return;
-  
-  // 向父组件传递session_id
-  emit('select-chat', props.sessionId);
-};
-
 const handleRename = () => {
   isRenaming.value = true;
-  editingTitle.value = props.title;
+  editingTitle.value = props.item.name;
 };
 
-const handleConfirmRename = async () => {
-  // 验证输入
+const handleConfirmRename = () => {
   if (!editingTitle.value.trim()) {
-    uni.showToast({
-      title: '会话名称不能为空',
-      icon: 'none'
-    });
+    uni.showToast({ title: '名称不能为空', icon: 'none' });
     return;
   }
-
-  // 如果名称没有变化，直接退出重命名模式
-  if (editingTitle.value.trim() === props.title) {
+  if (editingTitle.value.trim() === props.item.name) {
     isRenaming.value = false;
     editingTitle.value = '';
     return;
   }
-
-  try {
-    // 获取当前用户ID
-    const userId = chatStorageAPI._getUserIdFromToken();
-    if (!userId) {
-      uni.showToast({
-        title: '用户未登录',
-        icon: 'none'
-      });
-      return;
-    }
-
-    // 保存新名称，避免在清空editingTitle后丢失
-    const newName = editingTitle.value.trim();
-    
-    // 调用API更新数据库中的会话名称
-    const result = await chatStorageAPI.updateChatName(userId, props.sessionId, newName);
-    
-    if (result.success) {
-      // 更新成功，退出重命名模式
-      isRenaming.value = false;
-      editingTitle.value = '';
-      
-      // 触发重命名事件，通知父组件更新UI
-      emit('chat-renamed', {
-        sessionId: props.sessionId,
-        newName: newName,
-        oldName: props.title
-      });
-      
-      uni.showToast({
-        title: '重命名成功',
-        icon: 'success'
-      });
-      
-    } else {
-      // 更新失败
-      uni.showToast({
-        title: result.error || '重命名失败',
-        icon: 'none'
-      });
-      console.error('重命名失败:', result.error);
-    }
-  } catch (error) {
-    console.error('重命名异常:', error);
-    uni.showToast({
-      title: '重命名失败',
-      icon: 'none'
-    });
-  }
+  emit('rename-item', { item: props.item, newName: editingTitle.value.trim() });
+  isRenaming.value = false;
+  editingTitle.value = '';
 };
 
 const handleCancelRename = () => {
   isRenaming.value = false;
   editingTitle.value = '';
 };
+
 const handleInputBlur = () => {
-  // 添加小延迟，避免与点击事件冲突
   setTimeout(() => {
-    // 如果已经退出重命名模式，不再处理
     if (!isRenaming.value) return;
-    
     const trimmedValue = editingTitle.value.trim();
-    
-    if (trimmedValue && trimmedValue !== props.title) {
-      // 有输入内容且与原名不同，确认重命名
+    if (trimmedValue && trimmedValue !== props.item.name) {
       handleConfirmRename();
     } else {
-      // 没有输入内容或名称相同，取消重命名
       handleCancelRename();
     }
   }, 100);
@@ -182,57 +116,9 @@ const handleDelete = () => {
   isDeleting.value = true;
 };
 
-const handleConfirmDelete = async () => {
-  try {
-    // 获取当前用户ID
-    const userId = chatStorageAPI._getUserIdFromToken();
-    if (!userId) {
-      uni.showToast({
-        title: '用户未登录',
-        icon: 'none'
-      });
-      return;
-    }
-
-    // 调用API删除会话
-    const result = await chatStorageAPI.deleteChat(userId, props.sessionId);
-    
-    if (result.success) {
-      // 删除成功，退出删除模式
-      isDeleting.value = false;
-      
-      // 触发删除事件，通知父组件更新UI
-      emit('chat-deleted', {
-        sessionId: props.sessionId,
-        title: props.title
-      });
-      
-      uni.showToast({
-        title: '删除成功',
-        icon: 'success',
-        duration: 2000
-      });
-      
-      console.log('删除会话成功:', props.sessionId);
-    } else {
-      // 删除失败
-      uni.showToast({
-        title: result.error || '删除失败',
-        icon: 'none',
-        duration: 2000
-      });
-      console.error('删除会话失败:', result.error);
-      isDeleting.value = false;
-    }
-  } catch (error) {
-    console.error('删除会话异常:', error);
-    uni.showToast({
-      title: '删除失败',
-      icon: 'none',
-      duration: 2000
-    });
-    isDeleting.value = false;
-  }
+const handleConfirmDelete = () => {
+  emit('delete-item', props.item);
+  isDeleting.value = false;
 };
 
 const handleCancelDelete = () => {
@@ -242,30 +128,11 @@ const handleCancelDelete = () => {
 </script>
 
 <style scoped>
-.chat-history-item {
-  height: 5vh; /* 屏幕高度的十分之一 */
-  background: #fff;
-  border-radius: 12rpx;
-  margin-bottom: 16rpx;
-  padding: 24rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
-  border: 1px solid #f0f0f0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  transition: background-color 0.2s ease;
-  cursor: pointer;
+.chat-history-item-wrapper {
   position: relative;
 }
 
-.chat-history-item:active {
-  background: #f8f9fa;
-}
-
-.chat-item-content {
-  flex: 1;
-}
-
+/* 这里包含了所有旧版 ReusableItem 的样式，保证外观不变 */
 .chat-item-title {
   font-size: 28rpx;
   font-weight: 600;
@@ -284,12 +151,6 @@ const handleCancelDelete = () => {
   width: 100%;
   padding: 0;
   margin: 0;
-}
-
-.chat-item-actions {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
 }
 
 .action-icon {
@@ -366,14 +227,14 @@ const handleCancelDelete = () => {
 /* 删除模式样式 */
 .delete-mode-container {
   display: flex;
-  width: 100%;
-  height: 100%;
   position: absolute;
   top: 0;
   left: 0;
-  border-radius: 12rpx;
+  width: 100%;
+  height: 100%;
+  border-radius: 12rpx; /* 匹配 ReusableItem 的圆角 */
   overflow: hidden;
-  z-index: 999;
+  z-index: 2; /* 确保覆盖在 ReusableItem 内容之上 */
 }
 
 .delete-confirm {
@@ -402,26 +263,9 @@ const handleCancelDelete = () => {
   background: #16a34a;
 }
 
-.delete-text {
+.delete-text, .cancel-text {
   color: #fff;
   font-size: 28rpx;
   font-weight: 600;
 }
-
-.cancel-text {
-  color: #fff;
-  font-size: 28rpx;
-  font-weight: 600;
-}
-
-/* 删除模式遮罩层 */
-.delete-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: transparent;
-  z-index: 997;
-}
-</style> 
+</style>

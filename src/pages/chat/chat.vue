@@ -28,14 +28,11 @@
     </view>
     
     <!-- 会话列表面板 -->
-    <ReusablePanel
+    <ChatHistoryManager 
       v-if="isHistoryPanelVisible"
-      title="会话列表"
-      :items="chatHistoryStore.getChatList"
-      :is-loading="chatHistoryStore.getIsLoading"
-      @select-item="handleSelectChat"
-      @rename-item="handleRenameItem"
-      @delete-item="handleDeleteItem"
+      @select-chat="handleSelectChat"
+      @rename-chat="handleRenameItem"
+      @delete-chat="handleDeleteItem"
       @close="handleHistoryPanelClose"
       @click.stop
     />
@@ -55,7 +52,7 @@ import ChatMessageList from '@/components/ChatMessageList.vue';
 import ScrollToBottom from '@/components/ScrollToBottom.vue';
 import ChatInput from '@/components/ChatInput.vue';
 import InputOptionsPanel from '@/components/InputOptionsPanel.vue';
-import ReusablePanel from '@/components/ReusablePanel.vue';
+import ChatHistoryManager from '@/components/ChatHistoryManager.vue'; // 修改：引入新的管理器组件
 import { useChat } from '@/composables/useChat.js';
 import { updateNavigationTitle } from '@/utils/titleManager.js';
 import {useChatHistoryStore } from '@/stores/chatHistory.js'
@@ -64,6 +61,7 @@ import {useChatHistoryStore } from '@/stores/chatHistory.js'
 // 面板可见性状态
 const isOptionsPanelVisible = ref(false);
 const isHistoryPanelVisible = ref(false);
+const isFilePanelVisible = ref(false); // 新增：文件面板可见性
 const chatListIsAtBottom = ref(true); // 用于和子组件v-model绑定的滚动状态
 const isWriteMode = ref(false); // 教案模式状态
 
@@ -202,8 +200,7 @@ const handlePageClick = () => {
 // --- 生命周期钩子 ---
 // 组件挂载后设置
 onMounted(() => {
-  // 初始化会话列表，确保刷新后能看到历史记录
-  chatHistoryStore.initializeChatList();
+  // 初始化会话列表的逻辑已移至 ChatHistoryManager 组件
   // 滚动相关的监听已全部移入ChatMessageList组件，此处不再需要
   nextTick(() => {
     updatePageTitle(); // 初始化页面标题
