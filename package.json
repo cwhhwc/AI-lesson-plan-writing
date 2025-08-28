@@ -2,6 +2,7 @@
   "name": "uni-preset-vue",
   "version": "0.0.0",
   "scripts": {
+    "test": "vitest",
     "dev:custom": "uni -p",
     "dev:h5": "uni",
     "dev:h5:ssr": "uni --ssr",
@@ -54,7 +55,7 @@
     "@dcloudio/uni-quickapp-webview": "3.0.0-4070520250711001",
     "katex": "^0.16.22",
     "marked": "^16.1.1",
-    "pinia": "^3.0.3",
+    "pinia": "^2.1.7",
     "vue": "^3.4.21",
     "vue-i18n": "^9.1.9"
   },
@@ -65,6 +66,8 @@
     "@dcloudio/uni-stacktracey": "3.0.0-4070520250711001",
     "@dcloudio/vite-plugin-uni": "3.0.0-4070520250711001",
     "@vue/runtime-core": "^3.4.21",
-    "vite": "5.2.8"
+    "@vue/test-utils": "^2.4.6",
+    "vite": "5.2.8",
+    "vitest": "^3.2.4"
   }
 }

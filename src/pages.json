@@ -32,6 +32,12 @@
 			"style": {
 				"navigationBarTitleText": "教案详情页"
 			}
+		},
+		{
+			"path": "pages/share/share",
+			"style": {
+				"navigationBarTitleText": "分享内容"
+			}
 		}
 	],
 	"globalStyle": {

@@ -1,0 +1,6 @@
+当前 npm audit 报告 42 个高危和 8 个中危漏洞，主要源于 @dcloudio/uni-cli-shared 依赖的 @intlify、esbuild 和 jimp 系列包。经评估：
+
+@intlify 漏洞：项目未使用国际化功能，运行时风险可忽略。
+jimp/jpeg-js 漏洞：项目无用户上传，构建资源可信，风险低。
+esbuild 漏洞：仅影响本地开发环境。
+phin 漏洞：项目未使用相关网络下载功能。 已知风险，计划在 uni-app 官方更新 @dcloudio/uni-cli-shared 后立即升级。
