@@ -14,7 +14,7 @@
     <view class="input-section-wrapper">
       <!-- 选项面板 -->
       <InputOptionsPanel
-        v-if="isOptionsPanelVisible"
+        v-if="activePanel === 'options'"
         @option-click="handleSelectOption"
         @click.stop
       />
@@ -22,18 +22,25 @@
       <ChatInput 
         ref="chatInputRef"
         @send-message="handleSendMessage"
-        @toggle-options-panel="handleToggleOptionsPanel"
+        @toggle-options-panel="() => togglePanel('options')"
         @click.stop
       />
     </view>
     
     <!-- 会话列表面板 -->
     <ChatHistoryManager 
-      v-if="isHistoryPanelVisible"
+      v-if="activePanel === 'history'"
       @select-chat="handleSelectChat"
       @rename-chat="handleRenameItem"
       @delete-chat="handleDeleteItem"
       @close="handleHistoryPanelClose"
+      @click.stop
+    />
+
+    <!-- 文件列表面板 -->
+    <FileManager 
+      v-if="activePanel === 'file'"
+      @close="activePanel.value = null"
       @click.stop
     />
     
@@ -52,21 +59,23 @@ import ChatMessageList from '@/components/ChatMessageList.vue';
 import ScrollToBottom from '@/components/ScrollToBottom.vue';
 import ChatInput from '@/components/ChatInput.vue';
 import InputOptionsPanel from '@/components/InputOptionsPanel.vue';
-import ChatHistoryManager from '@/components/ChatHistoryManager.vue'; // 修改：引入新的管理器组件
+import ChatHistoryManager from '@/components/ChatHistoryManager.vue';
+import FileManager from '@/components/FileManager.vue'; // 新增：引入文件管理器
 import { useChat } from '@/composables/useChat.js';
 import { updateNavigationTitle } from '@/utils/titleManager.js';
-import {useChatHistoryStore } from '@/stores/chatHistory.js'
+import { useChatHistoryStore } from '@/stores/chatHistory.js';
+import { useFileStore } from '@/stores/fileStore.js'; // 新增：引入文件存储
 
 // --- 状态管理 ---
 // 面板可见性状态
-const isOptionsPanelVisible = ref(false);
-const isHistoryPanelVisible = ref(false);
-const isFilePanelVisible = ref(false); // 新增：文件面板可见性
+const activePanel = ref(null); // null: 无, 'options': 选项, 'history': 历史, 'file': 文件
 const chatListIsAtBottom = ref(true); // 用于和子组件v-model绑定的滚动状态
 const isWriteMode = ref(false); // 教案模式状态
 
 //聊天历史store
 const chatHistoryStore = useChatHistoryStore();
+//文件store
+const fileStore = useFileStore(); 
 
 // --- 组件引用 ---
 // ChatInput 组件引用
@@ -92,14 +101,14 @@ const {
 });
 
 // --- 辅助函数 ---
-// 更新导航栏标题 (从 store 的逻辑迁移而来)
+// 更新导航栏标题 
 const updatePageTitle = () => {
   const modeConfig = { isWriteMode: '写教案模式' };
   const currentState = { isWriteMode: isWriteMode.value };
   updateNavigationTitle(modeConfig, currentState);
 };
 
-// 设置模式 (从 store 的逻辑迁移而来)
+// 设置模式 
 const setMode = (modeName, value) => {
   if (modeName === 'isWriteMode') {
     isWriteMode.value = value;
@@ -114,47 +123,44 @@ const handleNewChat = () => {
   handleNewChatCore(chatInputRef.value);
 };
 
-// 处理会话选择（接收整个 item 对象）
-const handleSelectChat = (item) => {
-  const selectedSessionId = item?.id;
-  if (!selectedSessionId) return;
-  handleSelectChatCore(selectedSessionId);
-  isHistoryPanelVisible.value = false; // 选择后关闭面板
-};
-
 // 处理发送消息
 const handleSendMessage = (text) => {
   handleSendMessageCore(text, chatInputRef.value);
 };
 
-// 切换选项面板的可见性
-const handleToggleOptionsPanel = () => {
-  // 选项面板和历史面板互斥
-  if (isHistoryPanelVisible.value) {
-    isHistoryPanelVisible.value = false;
-  }
-  isOptionsPanelVisible.value = !isOptionsPanelVisible.value;
+// 切换面板的可见性
+const togglePanel = (panelName) => {
+  activePanel.value = activePanel.value === panelName ? null : panelName;
 };
 
 // 处理来自选项面板的点击
 const handleSelectOption = (option) => {
-  isOptionsPanelVisible.value = false; // 首先关闭面板
   switch (option.text) {
     case '聊天记录':
-      isHistoryPanelVisible.value = true;
+      activePanel.value = 'history';
       break;
     case '写教案':
+      activePanel.value = null; // 点击写教案时，关闭所有面板
       setMode('isWriteMode', !isWriteMode.value);
       break;
     case '我的文件':
-      uni.showToast({ title: '选择了“我的文件”', icon: 'none' });
+      activePanel.value = 'file';
       break;
   }
 };
 
+// --- 会话历史相关处理 ---
+// 处理会话选择（接收整个 item 对象）
+const handleSelectChat = (item) => {
+  const selectedSessionId = item?.id;
+  if (!selectedSessionId) return;
+  handleSelectChatCore(selectedSessionId);
+  activePanel.value = null; // 选择后关闭面板
+};
+
 // 处理历史面板关闭
 const handleHistoryPanelClose = () => {
-  isHistoryPanelVisible.value = false;
+  activePanel.value = null;
 };
 
 // 处理重命名会话（接收 { item, newName }）
@@ -169,18 +175,19 @@ const handleRenameItem = (renameData) => {
 const handleDeleteItem = (item) => {
   const sessionId = item?.id;
   if (!sessionId) return;
-
   const wasCurrent = chatHistoryStore.getCurrentSessionId === sessionId;
   chatHistoryStore.deleteChat(sessionId);
   if (wasCurrent) {
     handleClearMessages();
   }
 };
+
 // 处理清空消息
 const handleClearMessages = () => {
   handleNewChat();
 };
 
+// --- 其他处理 ---
 // 处理滚动到底部的请求
 const handleScrollToBottom = () => {
   // 直接调用子组件暴露出的API
@@ -189,12 +196,7 @@ const handleScrollToBottom = () => {
 
 // 统一的页面点击处理器，用于关闭所有打开的面板
 const handlePageClick = () => {
-  if (isOptionsPanelVisible.value) {
-    isOptionsPanelVisible.value = false;
-  }
-  if (isHistoryPanelVisible.value) {
-    isHistoryPanelVisible.value = false;
-  }
+  activePanel.value = null;
 };
 
 // --- 生命周期钩子 ---

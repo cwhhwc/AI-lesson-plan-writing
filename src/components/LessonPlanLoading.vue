@@ -22,6 +22,8 @@
 </template>
 
 <script setup>
+import { useNavigation } from '@/composables/useNavigation.js';
+
 // 定义props，接收来自父组件的卡片数据
 const props = defineProps({
   cardData: {
@@ -30,19 +32,17 @@ const props = defineProps({
   }
 });
 
-// 移除ID生成逻辑，重写跳转逻辑
+const { navigateToMarkdownPage } = useNavigation();
+
+// 跳转逻辑
 const handleNavigateToMarkdown = () => {
   // 如果教案已经保存并获得了永久ID，则使用永久ID跳转
   if (props.cardData.permanentId) {
-    uni.navigateTo({
-      url: `/pages/markdown/markdown?id=${props.cardData.permanentId}`
-    });
+    navigateToMarkdownPage({ id: props.cardData.permanentId });
   } 
   // 否则（仍在生成中），使用临时ID跳转，进入实时观看模式
   else if (props.cardData.temporaryId) {
-    uni.navigateTo({
-      url: `/pages/markdown/markdown?tempId=${props.cardData.temporaryId}`
-    });
+    navigateToMarkdownPage({ tempId: props.cardData.temporaryId });
   }
   // 如果两个ID都没有，则不执行任何操作
 };

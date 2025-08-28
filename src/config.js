@@ -9,6 +9,7 @@ export const API_CONFIG = {
     REGISTER: '/register',
     CHAT: '/chat',
     DOCUMENTS: '/documents', // 重构为通用名称
+    EXPORT_DOCX: '/htmlToDocx', // 新增：导出为DOCX
   },
   
   // 请求头配置

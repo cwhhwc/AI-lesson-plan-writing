@@ -101,14 +101,15 @@ const handleCancelRename = () => {
 };
 
 const handleInputBlur = () => {
+  // 只处理空值情况，不自动确认重命名
   setTimeout(() => {
     if (!isRenaming.value) return;
     const trimmedValue = editingTitle.value.trim();
-    if (trimmedValue && trimmedValue !== props.item.name) {
-      handleConfirmRename();
-    } else {
+    if (!trimmedValue) {
+      // 只有空值时才自动取消
       handleCancelRename();
     }
+    // 其他情况保持重命名状态，等待用户手动操作
   }, 100);
 };
 

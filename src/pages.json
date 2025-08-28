@@ -32,13 +32,6 @@
 			"style": {
 				"navigationBarTitleText": "教案详情页"
 			}
-		},
-		{
-			"path": "pages/pinia-test/pinia-test",
-			"style": {
-				"navigationBarTitleText": "Pinia测试",
-				"navigationStyle": "custom"
-			}
 		}
 	],
 	"globalStyle": {

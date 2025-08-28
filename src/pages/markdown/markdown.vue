@@ -1,6 +1,6 @@
 <template>
   <view class="page-container">
-    <!-- 1. 使用新的工具栏组件，并监听它发出的 command 事件 -->
+    <!-- 1. 使用工具栏组件，并监听它发出的 command 事件 -->
     <EditorToolbar @command="handleToolbarCommand" />
 
     <!-- 编辑器 -->
@@ -18,14 +18,13 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getDocumentByIdApi } from '@/api.js'
+import { getDocumentByIdApi, exportDocumentApi } from '@/api.js' // 引入导出API
 import { storeToRefs } from 'pinia'
 import { useLessonPlanStore } from '@/stores/lessonPlan.js'
 import 'katex/dist/katex.min.css'
 import { renderMarkdown } from '@/utils/renderMarkdown.js'
 import { useAutoSave } from '../../composables/useAutoSave.js'
-
-// 2. 引入刚刚创建的工具栏组件
+import { triggerBrowserDownload } from '@/utils/downloader.js'; // 引入下载工具
 import EditorToolbar from '../../components/EditorToolbar.vue'
 
 // --- Pinia Store 连接 ---
@@ -35,11 +34,11 @@ const { lessonPlanContent, isStreaming } = storeToRefs(lessonPlanStore)
 // --- 编辑器核心变量 ---
 let editorCtx = null
 const pendingInitialHtml = ref(null)
-const editorContent = ref('') // 用于暂存最新的编辑器内容
+const editorContent = ref('') // 用于暂存最新的编辑器HTML内容
+const documentTitle = ref(''); // 新增：用于存储文档标题
 
 // --- 自动保存相关 ---
 const currentDocumentId = ref(null)
-// 从 useAutoSave 中多解构出 saveDocument 函数
 const { isSaving, scheduleAutoSave, latestHtml, saveDocument } = useAutoSave(currentDocumentId)
 
 // --- 编辑器生命周期函数 ---
@@ -47,7 +46,7 @@ const onEditorReady = () => {
   uni.createSelectorQuery().select('#editor').context((res) => {
     editorCtx = res.context
     if (pendingInitialHtml.value !== null) {
-      editorCtx.setContents({ html: pendingInitialHtml.value })//富文本编辑器中设置内容
+      editorCtx.setContents({ html: pendingInitialHtml.value })
       pendingInitialHtml.value = null
       latestHtml.value = ''
     } else if (lessonPlanContent.value) {
@@ -74,20 +73,49 @@ watch(lessonPlanContent, (newMarkdown, oldMarkdown) => {
   editorCtx.setContents({ html: newHtml })
 })
 
-// 3. 新增一个函数，用于处理来自工具栏组件的命令
+// --- 工具栏事件处理 ---
 const handleToolbarCommand = (command) => {
-  if (!editorCtx) return
+  if (!editorCtx && command.name !== 'export' && command.name !== 'save') return;
 
-  if (command.name === 'save') {
-    saveDocument(editorContent.value); // 调用手动保存
-  } else if (command.name === 'clear') {
-    editorCtx.removeFormat()
-  } else {
-    editorCtx.format(command.name, command.value || '')
+  switch (command.name) {
+    case 'save':
+      saveDocument(editorContent.value); // 调用手动保存
+      break;
+    case 'export':
+      handleExport(); // 调用导出
+      break;
+    case 'clear':
+      editorCtx.removeFormat();
+      break;
+    default:
+      editorCtx.format(command.name, command.value || '');
+      break;
   }
 }
 
-// --- 根据路由参数加载已保存教案（仅当存在 id 时）---
+// --- 导出业务逻辑 ---
+const handleExport = async () => {
+  if (!currentDocumentId.value) {
+    uni.showToast({ title: '文档尚未保存，无法导出', icon: 'none' });
+    return;
+  }
+  uni.showLoading({ title: '正在导出...' });
+  try {
+    const response = await exportDocumentApi({
+      htmlId: currentDocumentId.value,
+      title: documentTitle.value, // 使用当前标题
+      content: editorContent.value // 发送最新的HTML内容，实现“保存并导出”
+    });
+    triggerBrowserDownload(response, `${documentTitle.value || 'document'}.docx`);
+  } catch (error) {
+    console.error('导出失败:', error);
+    uni.showToast({ title: '导出失败', icon: 'none' });
+  } finally {
+    uni.hideLoading();
+  }
+};
+
+// --- 根据路由参数加载已保存教案 ---
 async function loadDocumentIfNeeded(options) {
   const { id } = options || {}
   if (!id) return
@@ -95,6 +123,7 @@ async function loadDocumentIfNeeded(options) {
     const doc = await getDocumentByIdApi(id)
     if (doc && doc.id) {
       const html = doc.content || ''
+      documentTitle.value = doc.title || ''; // 保存标题
       if (editorCtx) {
         editorCtx.setContents({ html })
       } else {

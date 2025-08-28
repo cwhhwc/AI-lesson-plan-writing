@@ -82,3 +82,13 @@ export function deleteDocumentApi(documentId) {
     method: 'DELETE',
   });
 }
+
+// 导出教案为 DOCX
+export function exportDocumentApi({ htmlId, title, content }) {
+  return request({
+    url: API_CONFIG.ENDPOINTS.EXPORT_DOCX,
+    method: 'POST',
+    data: { htmlId, title, content },
+    isDownload: true, // 标记为下载请求
+  });
+}
