@@ -14,6 +14,8 @@ global.uni = {
   navigateBack: vi.fn(),
   redirectTo: vi.fn(),
   switchTab: vi.fn(),
+  reLaunch: vi.fn(),
+  removeStorageSync: vi.fn(),
   getSystemInfoSync: vi.fn(() => ({
     platform: 'devtools',
     statusBarHeight: 20,

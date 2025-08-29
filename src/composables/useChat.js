@@ -5,20 +5,7 @@ import chatStorageAPI from '@/utils/chatStorageService.js';
 import { removeToken } from '@/utils/token.js';
 import { useChatHistoryStore } from '@/stores/chatHistory.js';
 import { useLessonPlanStore } from '@/stores/lessonPlan.js';
-
-/**
- * [内部辅助函数] 生成唯一的临时ID，用于在获取到永久ID前占位
- * @param {object} chatHistoryStore - a pinia store instance
- * @returns {string} 临时ID
- */
-const _generateTemporaryId = (chatHistoryStore) => {
-  const currentSessionId = chatHistoryStore.getCurrentSessionId;
-  const timestamp = Date.now();
-  const randomId = Math.random().toString(36).substr(2, 9);
-  const baseId = currentSessionId || `new_${timestamp}`;
-  return `temp_${baseId}_${timestamp}_${randomId}`;
-};
-
+import { generateTemporaryId } from '@/utils/idUtils.js';
 
 /**
  * 聊天功能 Composable
@@ -156,7 +143,7 @@ export function useChat(options = {}) {
         messages.value[aiMsgIndex].card = {
           type: 'lesson_plan_card',
           status: 'loading',
-          temporaryId: _generateTemporaryId(chatHistoryStore),
+          temporaryId: generateTemporaryId(chatHistoryStore),
           permanentId: null,
           title: '教案生成中...',
           summary: 'AI正在思考，请稍候'
@@ -169,7 +156,7 @@ export function useChat(options = {}) {
     const streamHandler = (chunk) => {
       _parseStreamChunk(chunk, (data) => {
         if (data.reply) {
-          const normalized = data.reply.replace(/\\n/g, '\n');
+          const normalized = data.reply.replace(/\n/g, '\n');
           lessonPlanStore.processStreamData(normalized);
         }
       });
@@ -183,7 +170,7 @@ export function useChat(options = {}) {
         messages.value[aiMsgIndex].card = {
           type: 'lesson_plan_card',
           status: 'loading',
-          temporaryId: _generateTemporaryId(chatHistoryStore),
+          temporaryId: generateTemporaryId(chatHistoryStore),
           permanentId: null,
           title: '教案生成中...',
           summary: 'AI正在思考，请稍候'
