@@ -14,8 +14,20 @@ dist
 
 # Editor directories and files
 .idea
+.vscode/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# Sensitive, temporary, or local files
+.env
+.env.*
+!*.env.example
+/TempBackEnd/
+TODO.md
+GEMINI.md
+*.xlsx
+/login-design.html
+/jwt-decode-test.html

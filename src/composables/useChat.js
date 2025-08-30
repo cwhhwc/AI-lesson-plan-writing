@@ -6,6 +6,7 @@ import { removeToken } from '@/utils/token.js';
 import { useChatHistoryStore } from '@/stores/chatHistory.js';
 import { useLessonPlanStore } from '@/stores/lessonPlan.js';
 import { generateTemporaryId } from '@/utils/idUtils.js';
+import { convertStorageToRenderFormat } from '@/utils/messageConverter.js';
 
 /**
  * 聊天功能 Composable
@@ -70,50 +71,19 @@ export function useChat(options = {}) {
     }
   };
 
-  /**
-   * 将存储格式的消息转换为渲染格式
-   * @param {Array} storageMessages - 存储格式的消息数组
-   * @returns {Array} 渲染格式的消息数组
-   */
-  const convertStorageToRenderFormat = (storageMessages) => {
-    const convertedMessages = [];
-    storageMessages.forEach(message => {
-      if (message.user) {
-        convertedMessages.push({ role: 'user', content: message.user });
-      }
-      const hasAiText = typeof message.ai === 'string' && message.ai !== '';
-      const hasCard = message.card !== null && message.card !== undefined;
-      if (hasAiText || hasCard) {
-        const aiMsg = { role: 'ai', content: hasAiText ? message.ai : '' };
-        if (hasCard) {
-          aiMsg.card = message.card;
-        }
-        convertedMessages.push(aiMsg);
-      }
-    });
-    return convertedMessages;
-  };
+  
 
   /**
    * 处理发送消息
    * @param {string} text - 用户输入的消息
    * @param {Object} chatInputRef - 聊天输入组件引用
    */
-  const handleSendMessage = (text, chatInputRef) => {
+  const handleSendMessage = async(text, chatInputRef) => {
     messages.value.push({ role: 'user', content: text });
-    receiveAIMessage(text, chatInputRef);
-  };
-
-  /**
-   * 接收AI消息 - 主入口函数
-   * @param {string} userText - 用户消息
-   * @param {Object} chatInputRef - 聊天输入组件引用
-   */
-  const receiveAIMessage = async (userText, chatInputRef) => {
     if (isWriteMode) {
-      await _handleLessonModeFlow(userText, chatInputRef);
+     await _handleLessonModeFlow(text, chatInputRef);
     } else {
-      await _handleChatModeFlow(userText, chatInputRef);
+      await _handleChatModeFlow(text, chatInputRef);
     }
   };
 
@@ -362,6 +332,6 @@ export function useChat(options = {}) {
 
   return {
     messages, sessionId,
-    handleNewChat, handleSelectChat, handleSendMessage, receiveAIMessage, handleTokenInvalid, convertStorageToRenderFormat
+    handleNewChat, handleSelectChat, handleSendMessage, handleTokenInvalid, convertStorageToRenderFormat
   };
 }
