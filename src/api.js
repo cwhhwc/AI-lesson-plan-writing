@@ -1,7 +1,8 @@
-import { request } from '@/utils/request.js';
+import { request, tryRefreshToken } from '@/utils/request.js';
 import { API_CONFIG } from '@/config.js';
 
 // src/api.js
+// 1. 登录
 export function loginApi({ username, password, rememberMe }) {
   return request({
     url: API_CONFIG.ENDPOINTS.LOGIN,
@@ -10,6 +11,7 @@ export function loginApi({ username, password, rememberMe }) {
   });
 }
 
+// 2. 注册
 export function registerApi({ username, password, confirmPwd }) {
   return request({
     url: API_CONFIG.ENDPOINTS.REGISTER,
@@ -17,6 +19,8 @@ export function registerApi({ username, password, confirmPwd }) {
     requireAuth: false
   });
 }
+
+// 3.聊天接口，支持流式响应
 
 export function chatApi({ message, session_id, onMessage }) {
   const payload = { message };
@@ -83,7 +87,7 @@ export function deleteDocumentApi(documentId) {
   });
 }
 
-// 导出教案为 DOCX
+// 4.6 导出教案为 DOCX
 export function exportDocumentApi({ htmlId, title, content }) {
   return request({
     url: API_CONFIG.ENDPOINTS.EXPORT_DOCX,
@@ -91,4 +95,19 @@ export function exportDocumentApi({ htmlId, title, content }) {
     data: { htmlId, title, content },
     isDownload: true, // 标记为下载请求
   });
+}
+
+// 5. 登出
+export function logoutApi() {
+  return request({
+    url: API_CONFIG.ENDPOINTS.LOGOUT,
+    method: 'POST',
+  });
+}
+/**
+ * 触发主动刷新 Access Token 的 API
+ * 实际调用的是 request.js 中包含刷新逻辑的 tryRefreshToken 函数
+ */
+export function triggerProactiveTokenRefresh() {
+  return tryRefreshToken();
 }

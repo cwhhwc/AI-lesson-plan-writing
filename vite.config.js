@@ -5,4 +5,10 @@ export default defineConfig({
   plugins: [
     uni(),
   ],
+  server: {
+    https: {
+      key: require('fs').readFileSync('localhost-key.pem'),
+      cert: require('fs').readFileSync('localhost.pem'),
+    },
+  },
 })

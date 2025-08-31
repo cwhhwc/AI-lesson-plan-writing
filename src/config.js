@@ -10,6 +10,8 @@ export const API_CONFIG = {
     CHAT: '/chat',
     DOCUMENTS: '/documents', // 重构为通用名称
     EXPORT_DOCX: '/htmlToDocx', // 新增：导出为DOCX
+    REFRESH: '/auth/refresh', // 新增：刷新 Access Token
+    LOGOUT: '/auth/logout',   // 新增：用户登出
   },
   
   // 请求头配置

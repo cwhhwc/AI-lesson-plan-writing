@@ -46,77 +46,75 @@ import { ref } from 'vue';
 import GlassCard from '@/components/GlassCard.vue';
 import BaseInput from '@/components/BaseInput.vue';
 import BaseButton from '@/components/BaseButton.vue';
-import { loginApi } from '@/api.js';
-import { setToken } from '@/utils/token.js';
+// 1. 引入我们新的 auth store
+import { useAuthStore } from '@/stores/auth.js';
+
 const username = ref('');
 const password = ref('');
 const rememberMe = ref(false);
 const usernameError = ref(false);
 const passwordError = ref(false);
 const usernameErrorMsg = ref('');
-// 添加加载状态防止重复提交
+// 加载状态
 const isLoading = ref(false);
 
+// 2. 获取 auth store 实例
+const authStore = useAuthStore();
 
-function onLogin() {
+async function onLogin() {
   // 防止重复提交
   if (isLoading.value) return;
-  
+
   usernameError.value = !username.value.trim();
   passwordError.value = !password.value.trim();
-  // 清空后端返回的账号错误提示
+  // 清除之前的错误信息
   usernameErrorMsg.value = '';
+
   if (usernameError.value || passwordError.value) {
     return;
   }
-  
   // 设置加载状态
   isLoading.value = true;
-  
-  // 登录接口对接
-  loginApi({
-    username: username.value,
-    password: password.value,
-    rememberMe: rememberMe.value
-  })
-    .then(data => {
-      if (data.code === 0) {
-        uni.showToast({ title: '登录成功', icon: 'success' });
-        setToken(data.token);
-        uni.navigateTo({ url: '/pages/chat/chat' });
-        // 如有需要，可以在这里添加登录成功后的后续逻辑
-      } else {
-        // 如果后端返回用户名或密码错误，将message显示在账号输入框下方
-        if (data.message) {
-          usernameErrorMsg.value = data.message;
-        } else {
-          uni.showToast({ title: data.message || '登录失败', icon: 'none' });
-        }
-      }
-    })
-    .catch(() => {
-      uni.showToast({ title: '网络错误', icon: 'none' });
-      console.log('网络错误');
-    })
-    .finally(() => {
-      // 无论成功失败都要重置加载状态
-      isLoading.value = false;
+
+  try {
+    // 3. 调用 store 的 login action
+    await authStore.login({
+      username: username.value,
+      password: password.value,
     });
+
+    // 4. 登录成功
+    uni.showToast({ title: '登录成功', icon: 'success' });
+    uni.navigateTo({ url: '/pages/chat/chat' });
+
+  } catch (error) {
+    // 5. 登录失败，错误信息由 store 抛出
+    console.error(error);
+    usernameErrorMsg.value = error.message || '登录失败，请重试';
+    
+  } finally {
+    // 6. 无论成功失败，都重置加载状态
+    isLoading.value = false;
+  }
 }
-//判断输入框是否为空
-function onUsernameInput(e) {
-  if (e.detail && e.detail.value && usernameError.value) usernameError.value = false;
+
+// 输入时清除错误状态
+function onUsernameInput() {
+  if (username.value.trim() && usernameError.value) usernameError.value = false;
   if (usernameErrorMsg.value) usernameErrorMsg.value = '';
 }
-//判断密码是否为空
-function onPasswordInput(e) {
-  if (e.detail && e.detail.value && passwordError.value) passwordError.value = false;
+
+// 判断密码是否为空
+function onPasswordInput() {
+  if (password.value.trim() && passwordError.value) passwordError.value = false;
 }
-//忘记密码
+
+// 忘记密码
 function onForgot() {
   uni.showToast({ title: '请联系管理员', icon: 'none' });
 }
-//跳转注册页面
+
+// 注册
 function onRegister() {
   uni.navigateTo({ url: '/pages/register/register' });
 }

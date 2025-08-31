@@ -2,7 +2,6 @@ import { ref, nextTick, watch } from 'vue';
 import { chatApi, createDocumentApi } from '@/api.js';
 import { renderMarkdown } from '@/utils/renderMarkdown.js';
 import chatStorageAPI from '@/utils/chatStorageService.js';
-import { removeToken } from '@/utils/token.js';
 import { useChatHistoryStore } from '@/stores/chatHistory.js';
 import { useLessonPlanStore } from '@/stores/lessonPlan.js';
 import { generateTemporaryId } from '@/utils/idUtils.js';
@@ -236,10 +235,6 @@ export function useChat(options = {}) {
           sessionId.value = data.session_id;
           chatHistoryStore.setCurrentSessionId(data.session_id);
         }
-        if (data.code === 401) {
-          handleTokenInvalid();
-          return;
-        }
         if (data.code === 0) {
           onData(data);
         } else if (data.message) {
@@ -309,10 +304,6 @@ export function useChat(options = {}) {
       await chatApi({ message: userText, session_id: sessionId.value || undefined, onMessage: streamHandler });
       await onSuccess();
     } catch (e) {
-      if (e.message === 'TOKEN_INVALID') {
-        handleTokenInvalid();
-        return;
-      }
       console.error(e);
       onError(e);
     } finally {
@@ -320,18 +311,8 @@ export function useChat(options = {}) {
     }
   };
 
-  /**
-   * token失效统一处理
-   */
-  const handleTokenInvalid = () => {
-    removeToken();
-    uni.showToast({ title: '登录已过期，请重新登录', icon: 'none', duration: 2000 });
-    setTimeout(() => { uni.reLaunch({ url: '/pages/login/login' }); }, 2000);
-    if (onTokenInvalid) onTokenInvalid();
-  };
-
   return {
     messages, sessionId,
-    handleNewChat, handleSelectChat, handleSendMessage, handleTokenInvalid, convertStorageToRenderFormat
+    handleNewChat, handleSelectChat, handleSendMessage, convertStorageToRenderFormat
   };
 }

@@ -8,8 +8,8 @@ import {
   createChatDataTemplate,
   STORAGE_KEYS
 } from './chatStorage.js';
-import { getToken } from './token.js';
-import weappJwt from './weapp-jwt.js';
+// 引入user信息store获取用户信息
+import { useAuthStore } from '@/stores/auth.js';
 
 // ==================== 队列化异步存储（确保消息不丢失）====================
 class ChatStorageQueue {
@@ -82,26 +82,17 @@ export class ChatStorageService {
    */
   _getUserIdFromToken() {
     try {
-      const token = getToken();
-      if (!token) {
-        console.warn('未找到token');
-        return null;
-      }
-      
-      // 解码JWT token获取payload
-      const payload = weappJwt(token);
-      
-      // 从payload中获取用户ID（根据后端JWT结构可能需要调整字段名）
-      const userId = payload.userId;
+      const authStore = useAuthStore();
+      const userId = authStore.user?.id;
       
       if (!userId) {
-        console.warn('JWT token中未找到用户ID');
+        console.warn('authStore未找到用户ID');
         return null;
       }
       
       return String(userId);
     } catch (error) {
-      console.error('解析JWT token失败:', error);
+      console.error('从 authStore 中获取ID失败:', error);
       return null;
     }
   }
