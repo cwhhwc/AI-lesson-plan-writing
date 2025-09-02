@@ -5,6 +5,7 @@
 
 import { defineStore } from 'pinia';
 
+// 教案正文开始的标记
 const START_MARKER = '\n\n\n\n';
 
 export const useLessonPlanStore = defineStore('lessonPlan', {
@@ -72,6 +73,7 @@ export const useLessonPlanStore = defineStore('lessonPlan', {
         this.rawContent += chunk;
 
         if(startIndexInSearchArea !== -1){
+          console.log('找到教案开始标记');
           // 找到标记
           this.isStart = true;
           const startIndexInRawContent = this.rawContent.length - searchArea.length + startIndexInSearchArea;

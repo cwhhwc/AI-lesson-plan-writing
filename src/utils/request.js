@@ -38,11 +38,7 @@ const tryRefreshToken = async () => {
     if (!res.ok || !data.accessToken) { // 检查 res.ok for HTTP errors
       throw new Error(data.message || 'Failed to refresh token');
     }
-
-    const authStore = useAuthStore();
-    authStore.setAccessToken(data.accessToken);
-    
-    return Promise.resolve();
+    return data;
   } catch (error) {
     const authStore = useAuthStore();
     authStore.logout(); // 刷新失败，登出用户
@@ -68,7 +64,7 @@ function handleStreamReceive({ response, onMessage }) {
           if (onMessage) onMessage(chunk);
         }
       }
-      resolve();
+      resolve({ streamingComplete: true });
     } catch (e) {
       reject(e);
     }
@@ -78,11 +74,12 @@ function handleStreamReceive({ response, onMessage }) {
 /**
  * 处理H5环境的请求 (fetch API) - 移除 401 处理
  */
-async function handleH5Request(fullUrl, method, headers, data, onMessage, isDownload) {
+async function handleH5Request(fullUrl, method, headers, data, onMessage, isDownload, credentials = 'omit') {
   const res = await fetch(fullUrl, {
     method,
     headers,
-    body: JSON.stringify(data),
+    credentials, // 取消硬编码为 'include'，根据需要传入
+    body: data ? JSON.stringify(data) : null,
   });
 
   // 401 错误由外部拦截器处理，这里只处理其他状态码
@@ -91,7 +88,9 @@ async function handleH5Request(fullUrl, method, headers, data, onMessage, isDown
     const errorData = await res.json();
     throw { statusCode: 401, data: errorData, message: errorData.message || 'Unauthorized' };
   }
-
+  if (res.status === 204){
+    return {success: true, staths: 204};
+  }
   // 如果是下载请求
   if (isDownload) {
     return res.blob().then(blob => ({
@@ -159,13 +158,16 @@ async function handleUniRequest(fullUrl, method, headers, data, onMessage, isDow
  */
 async function authenticatedRequest(options, isRetry = false) {
   const authStore = useAuthStore();
-  const { url, method, data, onMessage, isDownload } = options;
+  const { url, method = 'POST', data, onMessage, isDownload, authType = 'token' } = options;
 
-  // 构建请求头
+  // 根据认证状态和类型设置请求头
   const headers = { ...API_CONFIG.HEADERS };
-  if (authStore.isAuthenticated && authStore.accessToken) {
+  if (authType === 'token' && authStore.isAuthenticated && authStore.accessToken) {
     headers['Authorization'] = `Bearer ${authStore.accessToken}`;
   }
+
+  // 根据认证类型设置 credentials
+  const credentials = authType === 'cookie' ? 'include' : 'omit';
   
   const fullUrl = getApiUrl(url);
 
@@ -173,7 +175,7 @@ async function authenticatedRequest(options, isRetry = false) {
     // 尝试发送请求
     let response;
     if (typeof window !== 'undefined' && window.fetch) {
-      response = await handleH5Request(fullUrl, method, headers, data, onMessage, isDownload);
+      response = await handleH5Request(fullUrl, method, headers, data, onMessage, isDownload, credentials);
     }
     /* 
     else {
@@ -237,30 +239,14 @@ async function authenticatedRequest(options, isRetry = false) {
  * @returns {Promise<Object>} - 返回接口的 data 部分
  */
 export async function request(options) {
-  const { url, method = 'POST', data, requireAuth = true, onMessage, isDownload } = options;
-
-  // 如果不需要认证，则直接发送请求，不走拦截器
-  if (!requireAuth) {
-    const fullUrl = getApiUrl(url);
-    const headers = { ...API_CONFIG.HEADERS }; // 基础头
-    
-    if (typeof window !== 'undefined' && window.fetch) {
-      return handleH5Request(fullUrl, method, headers, data, onMessage, isDownload);
-    } 
-    /*
-    else {
-      return handleUniRequest(fullUrl, method, headers, data, onMessage, isDownload);
-    }*/
-  }
-
-  // 需要认证的请求，走带拦截器的逻辑
+  // 现在可以根据authType决定是否携带token或cookie
   const response = await authenticatedRequest(options);
   
   // 这里可以添加更多响应处理逻辑，例如根据 code 抛出业务异常
   // if (response.data && response.data.code !== 0) {
   //   throw new Error(response.data.message || 'Business Error');
   // }
-
+  console.log('请求响应:（request）', response);
   return response.data || response; // 返回数据部分，或整个响应（如下载）
 }
 

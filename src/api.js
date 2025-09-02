@@ -7,7 +7,7 @@ export function loginApi({ username, password, rememberMe }) {
   return request({
     url: API_CONFIG.ENDPOINTS.LOGIN,
     data: { username, password, rememberMe },
-    requireAuth: false
+    authType: 'cookie', // 使用 Cookie 认证
   });
 }
 
@@ -16,7 +16,7 @@ export function registerApi({ username, password, confirmPwd }) {
   return request({
     url: API_CONFIG.ENDPOINTS.REGISTER,
     data: { username, password, confirmPwd },
-    requireAuth: false
+    authType: 'none', // 注册不需要认证
   });
 }
 
@@ -102,6 +102,7 @@ export function logoutApi() {
   return request({
     url: API_CONFIG.ENDPOINTS.LOGOUT,
     method: 'POST',
+    authType: 'cookie', // 使用 Cookie 认证
   });
 }
 /**

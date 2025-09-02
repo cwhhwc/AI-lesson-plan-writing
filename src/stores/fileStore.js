@@ -19,8 +19,8 @@ export const useFileStore = defineStore('file', () => {
     isLoading.value = true;
     try {
       const response = await listDocumentsApi({}); // 调用API获取文件列表，目前不传分页参数
-      if (response && response.data) {
-        files.value = response.data.map(file => ({
+      if (response) {
+        files.value = response.map(file => ({
           id: file.id,
           name: file.title, // 将后端返回的 title 映射为 name
           updated_at: file.updated_at // 保留其他有用信息

@@ -64,7 +64,7 @@ import FileManager from '@/components/FileManager.vue'; // 新增：引入文件
 import { useChat } from '@/composables/useChat.js';
 import { updateNavigationTitle } from '@/utils/titleManager.js';
 import { useChatHistoryStore } from '@/stores/chatHistory.js';
-import { useFileStore } from '@/stores/fileStore.js'; // 新增：引入文件存储
+import { useAuthStore } from '@/stores/auth.js'; // 引入登出处理函数
 
 // --- 状态管理 ---
 // 面板可见性状态
@@ -74,8 +74,9 @@ const isWriteMode = ref(false); // 教案模式状态
 
 //聊天历史store
 const chatHistoryStore = useChatHistoryStore();
-//文件store
-const fileStore = useFileStore(); 
+
+//认证store
+const authStore = useAuthStore();
 
 // --- 组件引用 ---
 // ChatInput 组件引用
@@ -95,8 +96,6 @@ const {
   handleSelectChat: handleSelectChatCore,
   handleSendMessage: handleSendMessageCore,
 } = useChat({
-  onTokenInvalid: () => {},
-  // onScrollCheck 已不再需要，由ChatMessageList内部处理
   isWriteMode: isWriteMode // 将isWriteMode状态传入useChat
 });
 
@@ -142,13 +141,39 @@ const handleSelectOption = (option) => {
     case '写教案':
       activePanel.value = null; // 点击写教案时，关闭所有面板
       setMode('isWriteMode', !isWriteMode.value);
+      console.log('切换写教案模式:', isWriteMode.value);
       break;
     case '我的文件':
       activePanel.value = 'file';
       break;
+    case '登出':
+      hadleLogout();
+      break;
   }
 };
 
+// 处理登出
+const hadleLogout = async () => {
+  uni.showModal({
+    title: '确认登出',
+    content: '您确定要登出吗？',
+    success: async (res) => {
+      if (res.confirm) {
+        try {
+          await authStore.logout();
+          uni.reLaunch({ url: '/pages/login/login' });
+        } catch (error) {
+          console.error('登出失败:', error);
+          uni.showToast({
+            title: '登出失败，请稍后重试',
+            icon: 'none'
+          });
+        }
+      }
+      // 如果取消则不做任何操作
+    }
+  });
+};
 // --- 会话历史相关处理 ---
 // 处理会话选择（接收整个 item 对象）
 const handleSelectChat = (item) => {

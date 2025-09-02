@@ -16,8 +16,7 @@ import { convertStorageToRenderFormat } from '@/utils/messageConverter.js';
  * @returns {Object} 聊天相关的状态和方法
  */
 export function useChat(options = {}) {
-  const { onTokenInvalid, onScrollCheck, isWriteMode } = options;
-  
+  const {onScrollCheck, isWriteMode } = options;
   const messages = ref([]);
   const sessionId = ref('');
   
@@ -79,9 +78,11 @@ export function useChat(options = {}) {
    */
   const handleSendMessage = async(text, chatInputRef) => {
     messages.value.push({ role: 'user', content: text });
-    if (isWriteMode) {
+    if (isWriteMode.value) {
+      console.log('进入写教案模式流程,isWriteMode:', isWriteMode);
      await _handleLessonModeFlow(text, chatInputRef);
     } else {
+      console.log('进入普通聊天模式流程,isWriteMode:', isWriteMode);
       await _handleChatModeFlow(text, chatInputRef);
     }
   };

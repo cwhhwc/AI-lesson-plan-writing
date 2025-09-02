@@ -43,6 +43,7 @@ const handleClose = () => {
 onMounted(() => {
   // 组件挂载时获取文件列表
   fileStore.fetchFiles();
+  console.log('FileManager 组件已挂载，文件列表：', fileStore.files.value);
 });
 </script>
 

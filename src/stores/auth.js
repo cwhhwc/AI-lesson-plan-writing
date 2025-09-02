@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 // 1. 引入真正的API调用函数
 import { loginApi, logoutApi } from '@/api.js'; 
+import { triggerProactiveTokenRefresh } from '@/api.js';
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -68,10 +69,33 @@ export const useAuthStore = defineStore('auth', {
 
     /**
      * 由请求拦截器在刷新token后调用
-     * @param {string} newAccessToken
+     * @param {object} data - 包含accessToken和userInfo
      */
-    setAccessToken(newAccessToken) {
-      this.accessToken = newAccessToken;
+    setAccessToken(data) {
+      if(data && data.accessToken) {
+        this.accessToken = data.accessToken;
+        if(data.userInfo) {
+          this.user = data.userInfo;
+        }
+      }
     },
+
+    /**
+     * 应用启动时主动刷新 Access Token
+     * @returns {Promise<bool>} - 刷新成功返回 true，失败返回 false
+     */
+    async proactiveRefresh() {
+      try {
+        // 接收返回的用户信息，并更新accessToken
+        const responseData = await triggerProactiveTokenRefresh();
+        this.setAccessToken(responseData);
+        return true;
+      } catch (error) {
+        console.error("Proactive token refresh failed:", error);
+        this.accessToken = null;
+        this.user = null;
+        return false;
+      }
+      }
   },
 });
