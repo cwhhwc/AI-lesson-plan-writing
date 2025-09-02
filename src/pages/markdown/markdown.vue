@@ -122,15 +122,7 @@ async function loadDocumentIfNeeded(options) {
   try {
     const doc = await getDocumentByIdApi(id)
     if (doc && doc.id) {
-      const html = doc.content || ''
-      documentTitle.value = doc.title || ''; // 保存标题
-      if (editorCtx) {
-        editorCtx.setContents({ html })
-      } else {
-        pendingInitialHtml.value = html
-      }
-      latestHtml.value = html
-      editorContent.value = html // 初始化时也更新暂存内容
+      setEditorContent(doc)
     } else {
       uni.showToast({ title: '未找到教案或无权限', icon: 'none' })
     }
@@ -139,9 +131,33 @@ async function loadDocumentIfNeeded(options) {
   }
 }
 
+// 设置编辑器内容
+function setEditorContent(doc) {
+  const html = doc.content || ''
+  documentTitle.value = doc.title || ''; // 保存标题
+  if (editorCtx) {
+    editorCtx.setContents({ html })
+  } else {
+    pendingInitialHtml.value = html
+  }
+  latestHtml.value = html
+  editorContent.value = html // 暂存内容
+}
+
 onLoad((options) => {
-  loadDocumentIfNeeded(options)
-  currentDocumentId.value = options && options.id ? options.id : null
+  const docId = options && options.id ? options.id : null
+  currentDocumentId.value = docId
+
+  //检查 store 中是否已有内容，且id匹配
+  if (saveDocument.value && saveDocument.value.id === docId){
+    console.log('使用store中的教案数据初始化编辑器');
+    setEditorContent(saveDocument.value);
+    lessonPlanStore.setSavedDocument(null); // 清空store，避免重复加载
+  }
+  else {
+    console.log('从API加载教案数据初始化编辑器');
+    loadDocumentIfNeeded(options);
+  }
 })
 </script>
 

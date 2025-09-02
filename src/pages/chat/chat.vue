@@ -40,7 +40,7 @@
     <!-- 文件列表面板 -->
     <FileManager 
       v-if="activePanel === 'file'"
-      @close="activePanel.value = null"
+      @close="handleHistoryPanelClose"
       @click.stop
     />
     

@@ -85,7 +85,7 @@ async function onLogin() {
 
     // 4. 登录成功
     uni.showToast({ title: '登录成功', icon: 'success' });
-    uni.navigateTo({ url: '/pages/chat/chat' });
+    uni.reLaunch({ url: '/pages/chat/chat' });
 
   } catch (error) {
     // 5. 登录失败，错误信息由 store 抛出

@@ -88,6 +88,18 @@ async function handleH5Request(fullUrl, method, headers, data, onMessage, isDown
     const errorData = await res.json();
     throw { statusCode: 401, data: errorData, message: errorData.message || 'Unauthorized' };
   }
+
+  // 通用错误处理
+  if (!res.ok) {
+    let errorPayload = null;
+    try{
+      errorPayload = await res.json();
+    }catch(e){
+      errorPayload = { message: res.statusText || 'Request failed' };
+    }
+
+    throw { statusCode: res.status, data: errorPayload, message: errorPayload.message || 'Request failed' };
+  }
   if (res.status === 204){
     return {success: true, staths: 204};
   }
