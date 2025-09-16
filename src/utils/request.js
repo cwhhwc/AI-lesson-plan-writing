@@ -41,8 +41,25 @@ const tryRefreshToken = async () => {
     return data;
   } catch (error) {
     const authStore = useAuthStore();
-    authStore.logout(); // 刷新失败，登出用户
-    return Promise.reject(error);
+    authStore.logout(); // 刷新失败，清空状态
+
+    // 检查当前页面是否是登录页
+    const pages = getCurrentPages();
+    const isLoginPage = pages.length > 0 && pages[pages.length - 1].route === 'pages/login/login';
+
+    // 如果不在登录页，说明是会话过期，直接跳转
+    if (!isLoginPage) {
+      // 使用 reLaunch 跳转到登录页，清空页面栈
+      uni.reLaunch({
+        url: '/pages/login/login'
+      });
+    }
+    
+    // 只在控制台打印深层错误，不再向上抛出，避免干扰UI
+    console.error("Token refresh failed:", error);
+    // 注意：这里不再 return Promise.reject(error)，切断了错误冒泡
+    // 返回一个被拒绝的Promise，但没有值，这样队列中的请求会失败，但不会有未捕获的错误弹窗
+    return Promise.reject();
   }
 };
 

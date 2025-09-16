@@ -1,62 +1,69 @@
 <template>
-  <view class="login-bg">
-    <GlassCard>
-      <view class="login-title">注册</view>
-      <view class="login-form">
-        <BaseInput
-          v-model="username"
-          label="账号"
-          placeholder="请输入账号"
-          :error="usernameError ? '账号不能为空' : usernameErrorMsg"
-          @input="onUsernameInput"
-        >
-          <template #icon>
-            <view class="icon-common user-icon"></view>
-          </template>
-        </BaseInput>
-        <BaseInput
-          v-model="password"
-          label="密码"
-          placeholder="请输入密码"
-          type="password"
-          :error="passwordError ? '密码不能为空' : passwordLengthError ? '密码必须为6-18位' : ''"
-          @input="onPasswordInput"
-        >
-          <template #icon>
-            <view class="icon-common lock-icon"></view>
-          </template>
-        </BaseInput>
-        <BaseInput
-          v-model="confirmPassword"
-          label="确认密码"
-          placeholder="请再次输入密码"
-          type="password"
-          :error="confirmPasswordError ? '确认密码不一致' : ''"
-          @input="onConfirmPasswordInput"
-        >
-          <template #icon>
-            <view class="icon-common lock-icon"></view>
-          </template>
-        </BaseInput>
-        <view style="display: flex; align-items: center; margin: 16rpx 0 0 0; font-size: 26rpx; color: #222;">
-          <checkbox v-model="agree" style="transform:scale(0.8);margin-right:2px;"/>
-          我已阅读并同意<text style="color:#3b82f6;text-decoration:underline;">用户协议</text>和<text style="color:#3b82f6;text-decoration:underline;">隐私政策</text>
-        </view>
-        <BaseButton @click="onRegister" :loading="isLoading">注册</BaseButton>
-        <view style="text-align:center; margin-top:32rpx; color:#222; font-size:28rpx;">
-          已有账号？<text style="color:#222; text-decoration:underline; margin-left:8rpx; cursor:pointer;" @tap="onLogin">返回登录</text>
+  <view class="login-container">
+    <view class="login-panel">
+      <!-- 左侧宣传栏 -->
+      <view class="showcase-section">
+        <view class="showcase-content">
+          <view class="showcase-title">开启您的创作之旅</view>
+          <view class="showcase-subtitle">加入折纸AI，体验专为教师设计的智能备课平台</view>
         </view>
       </view>
-    </GlassCard>
+
+      <!-- 右侧注册表单 -->
+      <view class="form-section">
+        <view class="form-content">
+          <image src="/static/logo.png" class="logo-image" mode="aspectFit" />
+          <view class="login-title">创建新账户</view>
+          
+          <view class="register-form">
+            <BaseInput
+              v-model="username"
+              label="用户名"
+              placeholder="请输入您的账号"
+              :error="usernameError ? '账号不能为空' : usernameErrorMsg"
+              @input="onUsernameInput"
+            />
+            <BaseInput
+              v-model="password"
+              label="密码"
+              placeholder="请输入6-18位密码"
+              type="password"
+              :error="passwordError ? '密码不能为空' : passwordLengthError ? '密码必须为6-18位' : passwordComplexityError ? '密码必须包含大小写字母和数字' : ''"
+              @input="onPasswordInput"
+            />
+            <BaseInput
+              v-model="confirmPassword"
+              label="确认密码"
+              placeholder="请再次输入密码"
+              type="password"
+              :error="confirmPasswordError ? '确认密码不一致' : ''"
+              @input="onConfirmPasswordInput"
+            />
+            <view class="agreement">
+              <checkbox :checked="agree" @tap="agree = !agree" style="transform:scale(0.7)"/>
+              <text>我已阅读并同意</text>
+              <text class="link">用户协议</text>
+              <text>和</text>
+              <text class="link">隐私政策</text>
+            </view>
+            <BaseButton @click="onRegister" :loading="isLoading" class="register-button">立即注册</BaseButton>
+            <view class="login-link">
+              已有账号？<text class="link" @tap="onLogin">直接登录</text>
+            </view>
+          </view>
+
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
 <script setup>
 import { ref } from 'vue';
-import GlassCard from '@/components/GlassCard.vue';
 import BaseInput from '@/components/BaseInput.vue';
 import BaseButton from '@/components/BaseButton.vue';
 import { registerApi } from '@/api.js';
+
 const username = ref('');
 const password = ref('');
 const confirmPassword = ref('');
@@ -65,10 +72,12 @@ const agree = ref(false);
 const usernameError = ref(false);
 const passwordError = ref(false);
 const passwordLengthError = ref(false);
+const passwordComplexityError = ref(false);
 const confirmPasswordError = ref(false);
 const usernameErrorMsg = ref('');
 // 添加加载状态防止重复提交
 const isLoading = ref(false);
+
 function onRegister() {
   // 防止重复提交
   if (isLoading.value) return;
@@ -76,6 +85,7 @@ function onRegister() {
   usernameError.value = !username.value.trim();
   passwordError.value = !password.value.trim();
   passwordLengthError.value = false;
+  passwordComplexityError.value = false;
   confirmPasswordError.value = false;
   usernameErrorMsg.value = '';
   
@@ -85,6 +95,16 @@ function onRegister() {
     passwordLengthError.value = true;
     return;
   }
+
+  const hasUpperCase = /[A-Z]/.test(password.value);
+  const hasLowerCase = /[a-z]/.test(password.value);
+  const hasNumber = /[0-9]/.test(password.value);
+
+  if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+    passwordComplexityError.value = true;
+    return;
+  }
+
   if (password.value !== confirmPassword.value) {
     confirmPasswordError.value = true;
     return;
@@ -118,58 +138,179 @@ function onRegister() {
       isLoading.value = false;
     });
 }
+
 function onUsernameInput(e) {
   if (e.detail && e.detail.value && usernameError.value) usernameError.value = false;
   if (usernameErrorMsg.value) usernameErrorMsg.value = '';
 }
+
 function onPasswordInput(e) {
   if (e.detail && e.detail.value && passwordError.value) passwordError.value = false;
   if (e.detail && e.detail.value && passwordLengthError.value) passwordLengthError.value = false;
+  if (e.detail && e.detail.value && passwordComplexityError.value) passwordComplexityError.value = false;
 }
+
 function onConfirmPasswordInput(e) {
   if (e.detail && e.detail.value && confirmPasswordError.value) confirmPasswordError.value = false;
 }
+
 function onLogin() {
   uni.navigateTo({ url: '/pages/login/login' });
 }
 </script>
 
 <style scoped>
-.login-bg {
-  min-height: 100vh;
-  width: 100vw;
-  background: linear-gradient(135deg, #99c9ec 0%, #6438de 100%);
+.login-container {
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+  width: 100vw;
+  min-height: 100vh;
+  background-color: #f0f2f5;
 }
-.login-title {
-  font-size: 48rpx;
-  font-weight: 700;
-  color: #222;
-  margin-bottom: 48rpx;
-  letter-spacing: 2.5rpx;
-  text-align: center;
+
+.login-panel {
+  width: 80%;
+  max-width: 1600rpx;
+  min-height: 80vh;
+  max-height: 90vh;
+  background-color: white;
+  border-radius: 20rpx;
+  box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.1);
+  display: flex;
+  overflow: hidden;
 }
-.login-form {
-  width: 90%;
+
+.showcase-section {
+  flex: 1;
+  background: linear-gradient(135deg, #3498db, #2980b9);
   display: flex;
   flex-direction: column;
-  gap: 40rpx;
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx;
+  text-align: center;
+  color: white;
 }
-.icon-common {
-  position: absolute;
-  left: 24rpx;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 40rpx;
-  height: 40rpx;
-  z-index: 1;
+
+.showcase-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  max-width: 430rpx;
 }
-.user-icon {
-  background: url('data:image/svg+xml;utf8,<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="12" r="6" stroke="%23999" stroke-width="2"/><path d="M6 26c0-4.418 4.03-8 10-8s10 3.582 10 8" stroke="%23999" stroke-width="2" fill="none"/></svg>') no-repeat center/contain;
+
+.showcase-logo {
+  width: 160rpx;
+  height: 160rpx;
+  margin-bottom: 40rpx;
 }
-.lock-icon {
-  background: url('data:image/svg+xml;utf8,<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="14" width="16" height="12" rx="3" stroke="%23999" stroke-width="2" fill="none"/><path d="M16 20v4" stroke="%23999" stroke-width="2"/><path d="M12 14v-4a4 4 0 1 1 8 0v4" stroke="%23999" stroke-width="2" fill="none"/></svg>') no-repeat center/contain;
+
+.showcase-title {
+  font-size: 48rpx;
+  font-weight: bold;
+  margin-bottom: 20rpx;
 }
-</style> 
+
+.showcase-subtitle {
+  font-size: 32rpx;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.form-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx;
+  box-sizing: border-box;
+}
+
+.form-content {
+  width: 100%;
+  max-width: 600rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.logo-image {
+  width: 120rpx;
+  height: 120rpx;
+  margin-bottom: 40rpx;
+}
+
+.login-title {
+  font-size: 44rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 60rpx;
+  text-align: center;
+}
+
+.register-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 30rpx;
+}
+
+.agreement {
+  font-size: 24rpx;
+  color: #666;
+  display: flex;
+  align-items: center;
+}
+
+.agreement .link {
+  color: #3498db;
+  cursor: pointer;
+  margin: 0 8rpx;
+}
+
+.register-button {
+  margin-top: 20rpx;
+}
+
+.login-link {
+  margin-top: 40rpx;
+  font-size: 28rpx;
+  color: #666;
+  text-align: center;
+}
+
+.login-link .link {
+  color: #3498db;
+  cursor: pointer;
+  margin-left: 8rpx;
+}
+
+
+:deep(.base-button) {
+  background-color: #007aff;
+  color: white;
+  font-weight: 500;
+  letter-spacing: 4rpx;
+  padding: 24rpx 0;
+}
+
+@media (max-width: 768px) {
+  .login-panel {
+    flex-direction: column;
+    width: 90%;
+    min-height: auto;
+    max-height: none;
+  }
+
+  .showcase-section {
+    display: none;
+  }
+
+  .form-section {
+    padding: 40rpx;
+  }
+}
+</style>

@@ -186,6 +186,7 @@ export function useChat(options = {}) {
       lessonPlanStore.endGeneration();
       stopWatch();
       if (messages.value[aiMsgIndex].card) messages.value[aiMsgIndex].card.status = 'error';
+      messages.value[aiMsgIndex].content = 'AI服务异常';
     });
   };
 

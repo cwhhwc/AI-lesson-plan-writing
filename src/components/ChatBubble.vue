@@ -1,5 +1,5 @@
 <template>
-  <view class="chat-bubble">
+  <view class="chat-bubble" :class="bubbleClass">
     <!-- 第一部分：渲染消息的文本内容 -->
     <!-- AI消息：使用v-html渲染，支持Markdown格式 -->
     <view v-if="message.role === 'ai'" class="ai-message" v-html="renderMarkdown(message.content || '')"></view>
@@ -13,6 +13,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 // 引入渲染和子组件
 import LessonPlanLoading from '@/components/LessonPlanLoading.vue';
 import { renderMarkdown } from '@/utils/renderMarkdown.js';
@@ -24,12 +25,15 @@ const props = defineProps({
     required: true
   }
 });
+
+const bubbleClass = computed(() => {
+  return props.message.role === 'ai' ? 'ai-bubble' : 'user-bubble';
+});
 </script>
 
 <style scoped>
 .chat-bubble {
   display: inline-block;
-  background: #e3f2fd;
   color: #222;
   border-radius: 24rpx;
   padding: 20rpx 32rpx;
@@ -41,6 +45,14 @@ const props = defineProps({
   user-select: text;
   -webkit-user-select: text;
   cursor: text;
+}
+
+.user-bubble {
+  background: #e3f2fd;
+}
+
+.ai-bubble {
+  background: #ffffff;
 }
 
 .user-message {

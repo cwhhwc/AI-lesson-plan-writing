@@ -8,6 +8,7 @@
         :class="['msg-row', msg.role === 'user' ? 'msg-user' : 'msg-ai']" 
         :id="'msg-' + idx"
         >
+          <image v-if="msg.role === 'ai'" src="/static/mylogo.svg" class="ai-avatar" />
           <ChatBubble 
             :message="msg"
           />
@@ -155,12 +156,19 @@ const handleNewChat = () => {
 .msg-row {
   display: flex;
   margin-bottom: 12rpx;
+  align-items: flex-start; /* 让头像和气泡顶部对齐 */
 }
 .msg-user {
   justify-content: flex-end;
 }
 .msg-ai {
   justify-content: flex-start;
+}
+.ai-avatar {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  margin-right: 20rpx;
 }
 .new-chat-container {
   display: flex;

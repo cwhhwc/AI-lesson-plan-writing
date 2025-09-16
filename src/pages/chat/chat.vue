@@ -20,7 +20,15 @@
       />
       <!-- 底部输入栏 -->
       <ChatInput 
+        v-if="!isWriteMode"
         ref="chatInputRef"
+        @send-message="handleSendMessage"
+        @toggle-options-panel="() => togglePanel('options')"
+        @click.stop
+      />
+      <LessonPlanInput
+        v-else
+        ref="lessonPlanInputRef"
         @send-message="handleSendMessage"
         @toggle-options-panel="() => togglePanel('options')"
         @click.stop
@@ -54,10 +62,11 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted, provide } from 'vue';
+import { ref, nextTick, onMounted, provide, computed } from 'vue';
 import ChatMessageList from '@/components/ChatMessageList.vue';
 import ScrollToBottom from '@/components/ScrollToBottom.vue';
 import ChatInput from '@/components/ChatInput.vue';
+import LessonPlanInput from '@/components/LessonPlanInput.vue';
 import InputOptionsPanel from '@/components/InputOptionsPanel.vue';
 import ChatHistoryManager from '@/components/ChatHistoryManager.vue';
 import FileManager from '@/components/FileManager.vue'; // 新增：引入文件管理器
@@ -81,6 +90,8 @@ const authStore = useAuthStore();
 // --- 组件引用 ---
 // ChatInput 组件引用
 const chatInputRef = ref(null);
+const lessonPlanInputRef = ref(null);
+const activeInputRef = computed(() => isWriteMode.value ? lessonPlanInputRef.value : chatInputRef.value);
 // ChatMessageList 组件引用
 const messageListRef = ref(null);
 
@@ -119,12 +130,12 @@ const setMode = (modeName, value) => {
 // --- 事件处理 ---
 // 处理新建会话
 const handleNewChat = () => {
-  handleNewChatCore(chatInputRef.value);
+  handleNewChatCore(activeInputRef.value);
 };
 
 // 处理发送消息
 const handleSendMessage = (text) => {
-  handleSendMessageCore(text, chatInputRef.value);
+  handleSendMessageCore(text, activeInputRef.value);
 };
 
 // 切换面板的可见性

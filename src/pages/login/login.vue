@@ -4,49 +4,39 @@
     <view class="login-panel">
       <!-- 2. 左侧宣传栏 -->
       <view class="showcase-section">
-        <!-- 这里未来可以放图片、产品Slogan等 -->
+        <view class="showcase-content">
+          <image src="/static/mylogo.svg" class="showcase-logo" mode="aspectFit" />
+          <view class="showcase-title">折纸AI</view>
+          <view class="showcase-subtitle">专为教师打造的智能备课平台</view>
+        </view>
       </view>
 
       <!-- 3. 右侧表单栏 -->
       <view class="form-section">
         <view class="form-content">
-          <image src="/static/logo.png" class="logo-image" mode="aspectFit" />
           <view class="login-title">欢迎回来</view>
-          <view class="login-form">
-            <BaseInput
-              v-model="username"
-              label="账号"
-              placeholder="请输入账号"
-              :error="usernameError ? '账号不能为空' : usernameErrorMsg"
-              @input="onUsernameInput"
-            >
-              <template #icon>
-                <view class="icon-common user-icon"></view>
-              </template>
-            </BaseInput>
-            <BaseInput
-              v-model="password"
-              label="密码"
-              placeholder="请输入密码"
-              type="password"
-              :error="passwordError ? '密码不能为空' : ''"
-              @input="onPasswordInput"
-            >
-              <template #icon>
-                <view class="icon-common lock-icon"></view>
-              </template>
-            </BaseInput>
-            <view class="login-options">
-              <label class="remember-me">
-                <checkbox :checked="rememberMe" @change="rememberMe = $event.detail.value" style="transform:scale(0.8); margin-right: 4rpx;"/> 记住我
-              </label>
-              <text class="forgot-password" @tap="onForgot">忘记密码？</text>
-            </view>
-            <BaseButton @click="onLogin" :loading="isLoading">登 录</BaseButton>
-            <view class="register-link">
-              还没有账号？<text class="register-action" @tap="onRegister">立即注册</text>
-            </view>
+          <LoginMethodTabs v-model:activeTab="activeTab" />
+          <PasswordLoginForm
+            v-if="activeTab === 'password'"
+            v-model:username="username"
+            v-model:password="password"
+            v-model:rememberMe="rememberMe"
+            :usernameError="usernameError"
+            :passwordError="passwordError"
+            :usernameErrorMsg="usernameErrorMsg"
+            :isLoading="isLoading"
+            @login="onLogin"
+            @forgot-password="onForgot"
+            @register="onRegister"
+            @username-input="onUsernameInput"
+            @password-input="onPasswordInput"
+          />
+          <view v-if="activeTab === 'phone'" class="phone-login-placeholder">
+            手机登录功能待实现
           </view>
+          <BaseButton @click="onLogin" :loading="isLoading">登 录</BaseButton>
+          
+          
         </view>
       </view>
     </view>
@@ -54,11 +44,13 @@
 </template>
 
 <script setup>
-// --- 你的 <script setup> 部分代码完全不变 ---
 import { ref } from 'vue';
-import BaseInput from '@/components/BaseInput.vue';
 import BaseButton from '@/components/BaseButton.vue';
 import { useAuthStore } from '@/stores/auth.js';
+import PasswordLoginForm from './components/PasswordLoginForm.vue';
+import LoginMethodTabs from './components/LoginMethodTabs.vue';
+
+const activeTab = ref('password');
 
 const username = ref('');
 const password = ref('');
@@ -136,10 +128,40 @@ function onRegister() {
 
 .showcase-section {
   flex: 1;
-  background-color: #f7f9fc; /* 给左侧一个非常浅的背景色以作区分 */
-  /* 未来可以在这里添加背景图 */
-  /* background-image: url(...); */
-  /* background-size: cover; */
+  background: linear-gradient(135deg, #3498db, #2980b9); /* 蓝色渐变背景 */
+  display: flex;
+  flex-direction: column; /* 内容垂直居中 */
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx;
+  text-align: center;
+  color: white; /* 确保文字颜色为白色 */
+}
+
+.showcase-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  max-width: 430rpx; /* 限制内容宽度 */
+}
+
+.showcase-logo {
+  width: 160rpx; /* 调整Logo大小 */
+  height: 160rpx;
+  margin-bottom: 40rpx;
+}
+
+.showcase-title {
+  font-size: 48rpx; /* 标题字体大小 */
+  font-weight: bold;
+  margin-bottom: 20rpx;
+}
+
+.showcase-subtitle {
+  font-size: 32rpx; /* 副标题字体大小 */
+  line-height: 1.5;
+  opacity: 0.9;
 }
 
 .form-section {
@@ -174,53 +196,21 @@ function onRegister() {
   text-align: center;
 }
 
+.phone-login-placeholder {
+  text-align: center;
+  padding: 80rpx 0;
+  color: #999;
+  font-size: 32rpx;
+  width: 100%;
+}
+
+
 .login-form {
+  /* This was the container for the form, now it's just a conceptual grouping */
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 40rpx;
-}
-
-.login-options {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  font-size: 26rpx;
-  color: #666;
-}
-
-.remember-me {
-  display: flex;
-  align-items: center;
-  color: #666;
-}
-
-.forgot-password {
-  color: #999;
-  cursor: pointer;
-}
-
-.forgot-password:hover {
-  text-decoration: underline;
-}
-
-.register-link {
-  margin-top: 32rpx;
-  text-align: center;
-  color: #666;
-  font-size: 28rpx;
-}
-
-.register-action {
-  color: #007aff;
-  font-weight: 500;
-  margin-left: 8rpx;
-  cursor: pointer;
-}
-
-.register-action:hover {
-  text-decoration: underline;
+  gap: 40rpx; /* This gap will apply between PasswordLoginForm, BaseButton, and register-link */
 }
 
 :deep(.base-button) {
@@ -231,23 +221,7 @@ function onRegister() {
   padding: 24rpx 0;
 }
 
-.icon-common {
-  position: absolute;
-  left: 24rpx;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 40rpx;
-  height: 40rpx;
-  z-index: 1;
-}
 
-.user-icon {
-  background: url('data:image/svg+xml;utf8,<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="12" r="6" stroke="%23999" stroke-width="2"/><path d="M6 26c0-4.418 4.03-8 10-8s10 3.582 10 8" stroke="%23999" stroke-width="2" fill="none"/></svg>') no-repeat center/contain;
-}
-
-.lock-icon {
-  background: url('data:image/svg+xml;utf8,<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="14" width="16" height="12" rx="3" stroke="%23999" stroke-width="2" fill="none"/><path d="M16 20v4" stroke="%23999" stroke-width="2"/><path d="M12 14v-4a4 4 0 1 1 8 0v4" stroke="%23999" stroke-width="2" fill="none"/></svg>') no-repeat center/contain;
-}
 
 /* 响应式布局：在小屏幕上，左右分栏变为上下堆叠 */
 @media (max-width: 768px) {
