@@ -7,21 +7,21 @@
         <!-- 教案模板 -->
         <view class="lesson-plan-template">
           请按照标准格式生成一个面向
-          <AutosizeInput v-model="targetAudience" placeholder="例如:初中生" />
+          <AutosizeInput :ref="el => inputRefs[0] = el" v-model="targetAudience" placeholder="例如:初中生" @focus-next="navigate(0)" @focus-prev="navigate(0, 'prev')" />
           的
-          <AutosizeInput v-model="subject" placeholder="例如:语文" />
+          <AutosizeInput :ref="el => inputRefs[1] = el" v-model="subject" placeholder="例如:语文" @focus-next="navigate(1)" @focus-prev="navigate(1, 'prev')" />
           教案，课题是
-          <AutosizeInput v-model="topic" placeholder="例如:《出师表》" />
+          <AutosizeInput :ref="el => inputRefs[2] = el" v-model="topic" placeholder="例如:《出师表》" @focus-next="navigate(2)" @focus-prev="navigate(2, 'prev')" />
           ，教学重点是
-          <AutosizeInput v-model="keyFocus" placeholder="例如:理解主旨" />
+          <AutosizeInput :ref="el => inputRefs[3] = el" v-model="keyFocus" placeholder="例如:理解主旨" @focus-next="navigate(3)" @focus-prev="navigate(3, 'prev')" />
           ，教学难点是
-          <AutosizeInput v-model="learningObjective" placeholder="例如:修辞手法" />
+          <AutosizeInput :ref="el => inputRefs[4] = el" v-model="learningObjective" placeholder="例如:修辞手法" @focus-next="navigate(4)" @focus-prev="navigate(4, 'prev')" />
           ，学生基础
-          <AutosizeInput v-model="studentLevel" placeholder="较好/较差" />
+          <AutosizeInput :ref="el => inputRefs[5] = el" v-model="studentLevel" placeholder="较好/较差" @focus-next="navigate(5)" @focus-prev="navigate(5, 'prev')" />
           ，需要补充的基础内容或者拓展点
-          <AutosizeInput v-model="extraContent" placeholder="选填" />
+          <AutosizeInput :ref="el => inputRefs[6] = el" v-model="extraContent" placeholder="选填" @focus-next="navigate(6)" @focus-prev="navigate(6, 'prev')" />
           。还需要的额外要求是
-          <AutosizeInput v-model="additionalRequirements" placeholder="选填" />
+          <AutosizeInput :ref="el => inputRefs[7] = el" v-model="additionalRequirements" placeholder="选填" @focus-next="navigate(7)" @focus-prev="navigate(7, 'prev')" />
           。
         </view>
         <!-- 加号按钮 -->
@@ -39,6 +39,15 @@
 import { ref, computed } from 'vue';
 import SendButton from './SendButton.vue';
 import AutosizeInput from './AutosizeInput.vue'; // 引入新组件
+
+// --- Navigation Logic ---
+const inputRefs = ref([]);
+const navigate = (currentIndex, direction = 'next') => {
+  const targetIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+  if (targetIndex >= 0 && targetIndex < inputRefs.value.length) {
+    inputRefs.value[targetIndex]?.focus();
+  }
+};
 
 // 定义emit事件
 const emit = defineEmits(['send-message', 'toggle-options-panel']);
