@@ -30,7 +30,6 @@
 import { ref, onMounted, watch, onUnmounted } from 'vue';
 import ChatBubble from '@/components/ChatBubble.vue';
 import NewChatButton from '@/components/NewChatButton.vue';
-import { renderMarkdown } from '@/utils/renderMarkdown.js';
 
 // 定义props
 const props = defineProps({

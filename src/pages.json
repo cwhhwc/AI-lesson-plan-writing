@@ -34,9 +34,9 @@
 			}
 		},
 		{
-			"path": "pages/share/share",
+			"path": "pages/recharge/recharge",
 			"style": {
-				"navigationBarTitleText": "分享内容"
+				"navigationBarTitleText": "我的余额"
 			}
 		}
 	],

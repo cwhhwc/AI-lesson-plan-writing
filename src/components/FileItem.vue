@@ -74,7 +74,7 @@ const props = defineProps({
 });
 
 // 定义emit事件
-const emit = defineEmits(['share-item']);
+const emit = defineEmits([]);
 
 // 获取 store 实例
 const fileStore = useFileStore();

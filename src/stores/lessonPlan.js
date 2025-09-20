@@ -58,43 +58,53 @@ export const useLessonPlanStore = defineStore('lessonPlan', {
     },
     
     // 处理教案数据：搜索标记并分流
-    _handleLessonModeData(chunk) {
-      if(this.isStart){
-        // 已经找到标记，所有后续内容都追加到教案正文
-        this.lessonPlanContent += chunk;
-      }else{
-        // 还未找到标记，在缓冲区中搜索
-        const markerLength = START_MARKER.length;
-        const tail = this.rawContent.slice(-(markerLength - 1));
-        const searchArea = tail + chunk;
+    _handleLessonModeData(originalChunk) {
+  // 将接收到的数据块中所有 '\n' (两个字符) 替换为 '\n' (一个换行符)。
+  // 这是为了解决 AI 或数据流中存在的转义不一致问题，确保我们总是在处理标准换行符。
+  const chunk = originalChunk.replace(/\\n/g, '\n');
 
-        const startIndexInSearchArea = searchArea.indexOf(START_MARKER);
+  if(this.isStart){
+    // 状态：已找到标记。所有后续（已归一化的）数据块都直接追加到教案正文。
+    this.lessonPlanContent += chunk;
+  }else{
+    // 状态：未找到标记。在（已归一化的）缓冲区中继续搜索。
+    const markerLength = START_MARKER.length;
+    const tail = this.rawContent.slice(-(markerLength - 1));
+    const searchArea = tail + chunk;
 
-        this.rawContent += chunk;
+    const startIndexInSearchArea = searchArea.indexOf(START_MARKER);
 
-        if(startIndexInSearchArea !== -1){
-          console.log('找到教案开始标记');
-          // 找到标记
-          this.isStart = true;
-          const startIndexInRawContent = this.rawContent.length - searchArea.length + startIndexInSearchArea;
+    // 将当前（已归一化的）数据块存入缓冲区，供下一次拼接。
+    this.rawContent += chunk;
 
-          const preInSearchArea = searchArea.slice(0, startIndexInSearchArea);
-          const preInCurrentChunk = preInSearchArea.slice(tail.length);
-          if (preInCurrentChunk && this.chatCallback) {
-            this.chatCallback(preInCurrentChunk);
-          }
-
-          const postMarkerContent = this.rawContent.slice(startIndexInRawContent + markerLength);
-          this.lessonPlanContent = postMarkerContent;
-
-          this.rawContent = '';
-        } else {
-          if (this.chatCallback) {
-            this.chatCallback(chunk);
-          }
-        }
+    if(startIndexInSearchArea !== -1){
+      // 找到了！
+      this.isStart = true;
+      
+      // 从缓冲区中，把标记之前和之后的内容分割开
+      const startIndexInRawContent = this.rawContent.length - searchArea.length + startIndexInSearchArea;
+      
+      // 标记之前的内容，需要通过回调传给聊天气泡显示
+      const preInSearchArea = searchArea.slice(0, startIndexInSearchArea);
+      const preInCurrentChunk = preInSearchArea.slice(tail.length);
+      if (preInCurrentChunk && this.chatCallback) {
+        this.chatCallback(preInCurrentChunk);
       }
-    },
+
+      // 标记之后的内容，是教案的开头，存入 lessonPlanContent
+      const postMarkerContent = this.rawContent.slice(startIndexInRawContent + markerLength);
+      this.lessonPlanContent = postMarkerContent;
+
+      // 清空缓冲区，因为它已经完成了它的历史使命
+      this.rawContent = '';
+    } else {
+      // 本次依然没找到，将当前（已归一化的）数据块作为普通聊天内容处理
+      if (this.chatCallback) {
+        this.chatCallback(chunk);
+      }
+    }
+  }
+},
     
     // 结束流式传输
     endGeneration() {

@@ -15,6 +15,7 @@
       <!-- 选项面板 -->
       <InputOptionsPanel
         v-if="activePanel === 'options'"
+        :is-write-mode="isWriteMode"
         @option-click="handleSelectOption"
         @click.stop
       />
@@ -79,7 +80,7 @@ import { useAuthStore } from '@/stores/auth.js'; // 引入登出处理函数
 // 面板可见性状态
 const activePanel = ref(null); // null: 无, 'options': 选项, 'history': 历史, 'file': 文件
 const chatListIsAtBottom = ref(true); // 用于和子组件v-model绑定的滚动状态
-const isWriteMode = ref(false); // 教案模式状态
+const isWriteMode = ref(true); // 教案模式状态
 
 //聊天历史store
 const chatHistoryStore = useChatHistoryStore();
@@ -145,19 +146,23 @@ const togglePanel = (panelName) => {
 
 // 处理来自选项面板的点击
 const handleSelectOption = (option) => {
-  switch (option.text) {
-    case '聊天记录':
+  switch (option.id) {
+    case 'history':
       activePanel.value = 'history';
       break;
-    case '写教案':
-      activePanel.value = null; // 点击写教案时，关闭所有面板
+    case 'toggle-write-mode':
+      activePanel.value = null; // 点击切换模式时，关闭所有面板
       setMode('isWriteMode', !isWriteMode.value);
       console.log('切换写教案模式:', isWriteMode.value);
       break;
-    case '我的文件':
+    case 'files':
       activePanel.value = 'file';
       break;
-    case '登出':
+    case 'balance':
+      uni.navigateTo({ url: '/pages/recharge/recharge' });
+      activePanel.value = null; // 点击后关闭面板
+      break;
+    case 'logout':
       hadleLogout();
       break;
   }
