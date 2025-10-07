@@ -3,8 +3,8 @@
   <view class="chat-container" @click="handlePageClick">
     <!-- 消息列表区域 -->
     <ChatMessageList 
-      ref="messageListRef"
       :messages="messages"
+      :scroll-trigger="scrollTrigger"
       @new-chat="handleNewChat"
       v-model:isAtBottom="chatListIsAtBottom"
       class="messages-area"
@@ -93,12 +93,6 @@ const authStore = useAuthStore();
 const chatInputRef = ref(null);
 const lessonPlanInputRef = ref(null);
 const activeInputRef = computed(() => isWriteMode.value ? lessonPlanInputRef.value : chatInputRef.value);
-// ChatMessageList 组件引用
-const messageListRef = ref(null);
-
-// --- 依赖注入 ---
-// 提供messageListRef给子组件使用 (此行可酌情保留或删除，取决于是否有其他子组件需要)
-provide('messageListRef', messageListRef);
 
 // --- 组合式函数 ---
 // 使用聊天 Composable
@@ -229,10 +223,13 @@ const handleClearMessages = () => {
 };
 
 // --- 其他处理 ---
+// 新增：用于触发滚动的响应式变量
+const scrollTrigger = ref(0);
+
 // 处理滚动到底部的请求
 const handleScrollToBottom = () => {
-  // 直接调用子组件暴露出的API
-  messageListRef.value?.scrollToBottom();
+  // 通过更新 prop 来触发子组件的滚动，而不是直接调用方法
+  scrollTrigger.value++;
 };
 
 // 统一的页面点击处理器，用于关闭所有打开的面板

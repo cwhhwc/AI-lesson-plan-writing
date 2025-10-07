@@ -36,11 +36,22 @@ const props = defineProps({
   messages: {
     type: Array,
     default: () => []
+  },
+  scrollTrigger: {
+    type: Number,
+    default: 0
   }
 });
 
 // 定义emits
 const emit = defineEmits(['new-chat', 'update:isAtBottom']);
+
+// 监听滚动触发器
+watch(() => props.scrollTrigger, () => {
+  if (props.scrollTrigger > 0) {
+    scrollToBottom();
+  }
+});
 
 // --- 滚动相关逻辑 --- 
 
@@ -104,10 +115,10 @@ onUnmounted(() => {
   }
 });
 
-// 通过defineExpose暴露API
-defineExpose({
-  scrollToBottom
-});
+// scrollToBottom 已变为内部方法，由 scrollTrigger prop 触发，不再需要暴露给父组件
+// defineExpose({
+//   scrollToBottom
+// });
 
 // --- 其他业务逻辑 ---
 
