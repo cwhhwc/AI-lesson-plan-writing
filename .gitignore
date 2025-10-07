@@ -20,6 +20,7 @@ dist
 *.njsproj
 *.sln
 *.sw?
+*.pem
 
 # Sensitive, temporary, or local files
 .env
@@ -32,3 +33,5 @@ GEMINI.md
 *.txt
 /login-design.html
 /jwt-decode-test.html
+localhost.pem
+localhost-key.pem*.pem 
