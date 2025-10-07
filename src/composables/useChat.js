@@ -19,6 +19,7 @@ export function useChat(options = {}) {
   const {onScrollCheck, isWriteMode } = options;
   const messages = ref([]);
   const sessionId = ref('');
+  const isSending = ref(false);
   
   const chatHistoryStore = useChatHistoryStore();
   const lessonPlanStore = useLessonPlanStore();
@@ -27,12 +28,9 @@ export function useChat(options = {}) {
    * 处理新建会话
    * @param {Object} chatInputRef - 聊天输入组件引用
    */
-  const handleNewChat = (chatInputRef) => {
+  const handleNewChat = () => {
     sessionId.value = '';
     messages.value = [];
-    if (chatInputRef) {
-      chatInputRef.setInputValue('');
-    }
     chatHistoryStore.clearCurrentSession();
     nextTick(() => {
       if (onScrollCheck) onScrollCheck();
@@ -76,23 +74,22 @@ export function useChat(options = {}) {
    * @param {string} text - 用户输入的消息
    * @param {Object} chatInputRef - 聊天输入组件引用
    */
-  const handleSendMessage = async(text, chatInputRef) => {
+  const handleSendMessage = async(text) => {
     messages.value.push({ role: 'user', content: text });
     if (isWriteMode.value) {
       console.log('进入写教案模式流程,isWriteMode:', isWriteMode);
-     await _handleLessonModeFlow(text, chatInputRef);
+     await _handleLessonModeFlow(text);
     } else {
       console.log('进入普通聊天模式流程,isWriteMode:', isWriteMode);
-      await _handleChatModeFlow(text, chatInputRef);
+      await _handleChatModeFlow(text);
     }
   };
 
   /**
    * [教案模式] 处理写教案模式的流式数据
    * @param {string} userText - 用户消息
-   * @param {Object} chatInputRef - 聊天输入组件引用
    */
-  const _handleLessonModeFlow = async (userText, chatInputRef) => {
+  const _handleLessonModeFlow = async (userText) => {
     // 1. 创建一个复合消息对象，用于承载“开头语”和“教案卡片”
     const aiMsgIndex = _prepareAIMessage('lesson');
     let resolveCardGate;
@@ -132,7 +129,7 @@ export function useChat(options = {}) {
       });
     };
     
-    await _executeApiCall(userText, chatInputRef, streamHandler, async () => {
+    await _executeApiCall(userText, streamHandler, async () => {
       lessonPlanStore.endGeneration();
       stopWatch(); // 确保在流程结束时也停止监听
       
@@ -193,12 +190,11 @@ export function useChat(options = {}) {
   /**
    * [聊天模式] 处理普通聊天模式的完整流程
    * @param {string} userText - 用户消息
-   * @param {Object} chatInputRef - 聊天输入组件引用
    */
-  const _handleChatModeFlow = async (userText, chatInputRef) => {
+  const _handleChatModeFlow = async (userText) => {
     const aiMsgIndex = _prepareAIMessage();
     const streamHandler = (chunk) => _handleChatModeStream(chunk, aiMsgIndex);
-    await _executeApiCall(userText, chatInputRef, streamHandler, async () => {
+    await _executeApiCall(userText, streamHandler, async () => {
       // 改造：传入完整的AI消息对象
       await saveChatToStorage(userText, messages.value[aiMsgIndex]);
     }, () => {
@@ -300,8 +296,8 @@ export function useChat(options = {}) {
    * @param {Function} onSuccess - 成功回调
    * @param {Function} onError - 错误回调
    */
-  const _executeApiCall = async (userText, chatInputRef, streamHandler, onSuccess, onError) => {
-    if (chatInputRef) chatInputRef.setIsSending(true);
+  const _executeApiCall = async (userText, streamHandler, onSuccess, onError) => {
+    isSending.value = true;
     try {
       await chatApi({ message: userText, session_id: sessionId.value || undefined, onMessage: streamHandler });
       await onSuccess();
@@ -309,12 +305,12 @@ export function useChat(options = {}) {
       console.error(e);
       onError(e);
     } finally {
-      if (chatInputRef) chatInputRef.setIsSending(false);
+      isSending.value = false;
     }
   };
 
   return {
-    messages, sessionId,
+    messages, sessionId, isSending,
     handleNewChat, handleSelectChat, handleSendMessage, convertStorageToRenderFormat
   };
 }

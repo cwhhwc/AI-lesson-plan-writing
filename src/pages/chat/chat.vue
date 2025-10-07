@@ -23,6 +23,7 @@
       <ChatInput 
         v-if="!isWriteMode"
         ref="chatInputRef"
+        :is-sending="isSending"
         @send-message="handleSendMessage"
         @toggle-options-panel="() => togglePanel('options')"
         @click.stop
@@ -30,6 +31,7 @@
       <LessonPlanInput
         v-else
         ref="lessonPlanInputRef"
+        :is-sending="isSending"
         @send-message="handleSendMessage"
         @toggle-options-panel="() => togglePanel('options')"
         @click.stop
@@ -98,6 +100,7 @@ const activeInputRef = computed(() => isWriteMode.value ? lessonPlanInputRef.val
 // 使用聊天 Composable
 const {
   messages,
+  isSending, // 新增：从 useChat 获取 isSending 状态
   handleNewChat: handleNewChatCore,
   handleSelectChat: handleSelectChatCore,
   handleSendMessage: handleSendMessageCore,
@@ -125,12 +128,16 @@ const setMode = (modeName, value) => {
 // --- 事件处理 ---
 // 处理新建会话
 const handleNewChat = () => {
-  handleNewChatCore(activeInputRef.value);
+  handleNewChatCore(); // 不再传入 ref
+  // 由 chat.vue 明确负责清空 UI
+  if (activeInputRef.value) {
+    activeInputRef.value.setInputValue('');
+  }
 };
 
 // 处理发送消息
 const handleSendMessage = (text) => {
-  handleSendMessageCore(text, activeInputRef.value);
+  handleSendMessageCore(text); // 不再传入 ref
 };
 
 // 切换面板的可见性

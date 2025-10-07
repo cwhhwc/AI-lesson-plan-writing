@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-// 1. 引入真正的API调用函数
+// 1. 引入API调用函数
 import { loginApi, logoutApi } from '@/api.js'; 
 import { triggerProactiveTokenRefresh } from '@/api.js';
 
@@ -7,6 +7,7 @@ export const useAuthStore = defineStore('auth', {
   state: () => ({
     accessToken: null,
     user: null, // 用于存储用户信息，例如 { id, email }
+    justLoggedIn: false, // 新增：用于登录后跳转的标志位
   }),
 
   getters: {

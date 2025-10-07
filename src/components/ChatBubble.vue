@@ -1,13 +1,20 @@
 <template>
   <view class="chat-bubble" :class="bubbleClass">
-    <!-- 第一部分：渲染消息的文本内容 -->
-    <!-- AI消息：使用v-html渲染，支持Markdown格式 -->
-    <view v-if="message.role === 'ai'" class="ai-message" v-html="renderMarkdown(message.content || '')"></view>
-    <!-- 用户消息：直接渲染文本，防止XSS -->
-    <view v-else class="user-message">{{ message.content }}</view>
-
-    <!-- 第二部分：如果消息对象中存在card属性，则渲染教案卡片组件 -->
-    <LessonPlanLoading v-if="message.card" :card-data="message.card" />
+    <!-- "思考中" 状态：当是AI消息、且内容为空、且没有卡片时显示 -->
+    <view v-if="message.role === 'ai' && !message.content && !message.card" class="thinking-indicator">
+      <view class="dot-flashing"></view>
+    </view>
+    
+    <!-- 正常消息内容 -->
+    <template v-else>
+      <!-- AI消息：使用v-html渲染，支持Markdown格式 -->
+      <view v-if="message.role === 'ai'" class="ai-message" v-html="renderMarkdown(message.content || '')"></view>
+      <!-- 用户消息：直接渲染文本，防止XSS -->
+      <view v-else class="user-message">{{ message.content }}</view>
+  
+      <!-- 教案卡片组件 -->
+      <LessonPlanLoading v-if="message.card" :card-data="message.card" />
+    </template>
 
   </view>
 </template>
@@ -63,5 +70,59 @@ const bubbleClass = computed(() => {
 
 .ai-message {
   line-height: 1.5;
+}
+
+/* 新增：思考中提示的样式 */
+.thinking-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 45rpx; /* 与文本行高大致匹配 */
+}
+
+.dot-flashing {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  background-color: #2196F3;
+  color: #2196F3;
+  animation: dot-flashing 1s infinite linear alternate;
+  animation-delay: 0.5s;
+}
+.dot-flashing::before, .dot-flashing::after {
+  content: "";
+  display: inline-block;
+  position: absolute;
+  top: 0;
+}
+.dot-flashing::before {
+  left: -15px;
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  background-color: #2196F3;
+  color: #2196F3;
+  animation: dot-flashing 1s infinite alternate;
+  animation-delay: 0s;
+}
+.dot-flashing::after {
+  left: 15px;
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  background-color: #2196F3;
+  color: #2196F3;
+  animation: dot-flashing 1s infinite alternate;
+  animation-delay: 1s;
+}
+
+@keyframes dot-flashing {
+  0% {
+    background-color: #2196F3;
+  }
+  50%, 100% {
+    background-color: #BBDEFB;
+  }
 }
 </style>

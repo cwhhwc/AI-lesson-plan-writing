@@ -49,6 +49,14 @@ const navigate = (currentIndex, direction = 'next') => {
   }
 };
 
+// 定义props
+const props = defineProps({
+  isSending: {
+    type: Boolean,
+    default: false
+  }
+});
+
 // 定义emit事件
 const emit = defineEmits(['send-message', 'toggle-options-panel']);
 
@@ -61,7 +69,6 @@ const learningObjective = ref('');
 const studentLevel = ref('');
 const extraContent = ref('');
 const additionalRequirements = ref(''); // 新增：额外要求
-const isSending = ref(false);
 
 // 计算是否所有核心输入框都为空，用于禁用发送按钮
 const isInputEmpty = computed(() => {
@@ -94,7 +101,7 @@ const clearInput = () => {
 
 // 处理发送消息
 const handleSend = () => {
-  if (isInputEmpty.value || isSending.value) return;
+  if (isInputEmpty.value || props.isSending) return;
 
   // 拼接最终发送的字符串
   const message = `请按照标准格式生成一个面向${targetAudience.value.trim() || '学生'}的${subject.value.trim() || '科目'}教案，课题是${topic.value.trim() || '未指定'}，教学重点是${keyFocus.value.trim() || '未指定'}，教学难点是${learningObjective.value.trim() || '未指定'}，学生基础${studentLevel.value.trim() || '中等'}，需要补充的基础内容或者拓展点${extraContent.value.trim() || '无'}。还需要的额外要求是${additionalRequirements.value.trim() || '无'}。`;
@@ -107,10 +114,6 @@ const handleSend = () => {
 
 // 暴露方法给父组件
 defineExpose({
-  isSending,
-  setIsSending: (value) => {
-    isSending.value = value;
-  },
   setInputValue: (value) => {
     // 兼容useChat中的清空逻辑
     if (value === '') {

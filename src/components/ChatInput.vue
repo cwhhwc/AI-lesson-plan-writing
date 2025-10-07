@@ -29,12 +29,19 @@
 import { ref } from 'vue';
 import SendButton from './SendButton.vue';
 
+// 定义props
+const props = defineProps({
+  isSending: {
+    type: Boolean,
+    default: false
+  }
+});
+
 // 定义emit事件
 const emit = defineEmits(['send-message', 'toggle-options-panel']);
 
 // 本地状态
 const inputValue = ref('');
-const isSending = ref(false);
 
 // 打开选项面板的请求
 const toggleOptionsPanel = () => {
@@ -44,7 +51,7 @@ const toggleOptionsPanel = () => {
 // 处理发送消息
 const handleSend = () => {
   const text = inputValue.value.trim();
-  if (!text || isSending.value) return;
+  if (!text || props.isSending) return;
   
   emit('send-message', text);
   inputValue.value = '';
@@ -52,13 +59,8 @@ const handleSend = () => {
 
 // 暴露方法给父组件
 defineExpose({
-  inputValue,
-  isSending,
   setInputValue: (value) => {
     inputValue.value = value;
-  },
-  setIsSending: (value) => {
-    isSending.value = value;
   }
 });
 </script>

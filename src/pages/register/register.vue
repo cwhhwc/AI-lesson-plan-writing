@@ -64,6 +64,7 @@ import { ref } from 'vue';
 import BaseInput from '@/components/BaseInput.vue';
 import BaseButton from '@/components/BaseButton.vue';
 import { registerApi } from '@/api.js';
+import { validatePassword, isValidEmail } from '@/utils/validation.js';
 
 const email = ref('');
 const password = ref('');
@@ -79,11 +80,6 @@ const emailErrorMsg = ref('');
 // 添加加载状态防止重复提交
 const isLoading = ref(false);
 
-function isValidEmail(email) {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
 function onRegister() {
   // 防止重复提交
   if (isLoading.value) return;
@@ -95,7 +91,7 @@ function onRegister() {
   passwordComplexityError.value = false;
   confirmPasswordError.value = false;
 
-  // --- 新增的邮箱验证逻辑 ---
+  // --- 使用新的邮箱验证逻辑 ---
   if (!email.value.trim()) {
     emailErrorMsg.value = '邮箱不能为空';
     return;
@@ -107,19 +103,18 @@ function onRegister() {
   // -------------------------
   
   if (passwordError.value) return;
-  if (password.value.length < 6 || password.value.length > 18) {
-    passwordLengthError.value = true;
+
+  // --- 使用新的密码验证逻辑 ---
+  const passwordValidation = validatePassword(password.value);
+  if (!passwordValidation.valid) {
+    if (passwordValidation.error === 'length') {
+      passwordLengthError.value = true;
+    } else if (passwordValidation.error === 'complexity') {
+      passwordComplexityError.value = true;
+    }
     return;
   }
-
-  const hasUpperCase = /[A-Z]/.test(password.value);
-  const hasLowerCase = /[a-z]/.test(password.value);
-  const hasNumber = /[0-9]/.test(password.value);
-
-  if (!hasUpperCase || !hasLowerCase || !hasNumber) {
-    passwordComplexityError.value = true;
-    return;
-  }
+  // --------------------------
 
   if (password.value !== confirmPassword.value) {
     confirmPasswordError.value = true;
@@ -141,7 +136,6 @@ function onRegister() {
         setTimeout(() => {
           uni.navigateTo({ url: '/pages/login/login' });
         }, 800);
-        // TODO: 注册成功后的后续逻辑
       } else {
         emailErrorMsg.value = data.message || '注册失败';
       }

@@ -36,6 +36,7 @@ import { onLoad } from '@dcloudio/uni-app';
 import BaseInput from '@/components/BaseInput.vue';
 import BaseButton from '@/components/BaseButton.vue';
 import { resetPasswordApi } from '@/api.js';
+import { validatePassword } from '@/utils/validation.js';
 
 const email = ref('');
 const newPassword = ref('');
@@ -64,7 +65,7 @@ async function handleResetPassword() {
   // 重置错误信息
   passwordErrorMsg.value = '';
   confirmPasswordErrorMsg.value = '';
-  console.log('重置密码', { email: email.value, newPassword: newPassword.value, confirmPassword: confirmPassword.value });
+
   // 前端校验
   if(!email.value) {
     uni.showToast({
@@ -77,10 +78,19 @@ async function handleResetPassword() {
     passwordErrorMsg.value = '新密码不能为空';
     return;
   }
-  if (newPassword.value.length < 8) {
-    passwordErrorMsg.value = '密码长度不能少于8位';
+
+  // --- 使用新的密码验证逻辑 ---
+  const passwordValidation = validatePassword(newPassword.value);
+  if (!passwordValidation.valid) {
+    if (passwordValidation.error === 'length') {
+      passwordErrorMsg.value = '密码必须为6-18位';
+    } else if (passwordValidation.error === 'complexity') {
+      passwordErrorMsg.value = '密码必须包含大小写字母和数字';
+    }
     return;
   }
+  // --------------------------
+
   if (newPassword.value !== confirmPassword.value) {
     confirmPasswordErrorMsg.value = '两次输入的密码不一致';
     return;

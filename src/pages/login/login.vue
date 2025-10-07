@@ -45,6 +45,7 @@
 
 <script setup>
 import { ref } from 'vue';
+import { onShow } from '@dcloudio/uni-app';
 import BaseButton from '@/components/BaseButton.vue';
 import { useAuthStore } from '@/stores/auth.js';
 import PasswordLoginForm from './components/PasswordLoginForm.vue';
@@ -61,6 +62,15 @@ const emailErrorMsg = ref('');
 const isLoading = ref(false);
 
 const authStore = useAuthStore();
+
+onShow(() => {
+  if (authStore.justLoggedIn) {
+    authStore.justLoggedIn = false; // 重置标志位，防止重复跳转
+    uni.reLaunch({
+      url: '/pages/chat/chat'
+    });
+  }
+});
 
 async function onLogin() {
   if (isLoading.value) return;
