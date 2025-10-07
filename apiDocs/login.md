@@ -1,12 +1,17 @@
-# 用户登录注册API
+# API 接口文档
 
+> 本项目前端依赖的后端 API 接口规范。  
+> 适用于项目部署、协作开发与接口对接。  
+> 🔐 所有接口示例使用 `https://api.example.com/v1` 为基准地址（请替换为实际服务地址）。
 ## 基本信息
 
-- **API根地址**：
+- **Base URL**：
   ```
-  https://rgcwdfzvbeib.sealosbja.site
+  https://api.example.com/v1
   ```
+- **协议**：`https`
 - **数据传输格式**：所有接口均采用 `Content-Type: application/json`，请求和响应均为 JSON。
+- **认证方式**：JWT(通过`Authorization: Bearer <token>` 传递)
 - **通用错误码说明**：
   | code  | 说明                         |
   |-------|------------------------------|
@@ -15,13 +20,15 @@
   | 401   | 未授权/未登录                |
   | 409   | 资源冲突（如用户名已存在）    |
   | 500   | 服务器内部错误               |
-
+- **字符编码**：UTF-8
 ---
 
-## API接口
+## API接口列表
 
 ### 1. 用户登录
-- **POST** `/api/login`
+- **URL** `/api/login`
+- **请求方式**：POST
+- **描述**：用户登录，返回登录成功、用户信息、token。
 - **请求参数**：
   ```json
   {
