@@ -6,7 +6,7 @@ import { triggerProactiveTokenRefresh } from '@/api.js';
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     accessToken: null,
-    user: null, // 用于存储用户信息，例如 { id, username }
+    user: null, // 用于存储用户信息，例如 { id, email }
   }),
 
   getters: {
@@ -20,7 +20,7 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     /**
      * 登录 Action
-     * @param {object} credentials - { username, password }
+     * @param {object} credentials - { email, password }
      * @returns {Promise<void>}
      */
     async login(credentials) {
@@ -40,7 +40,7 @@ export const useAuthStore = defineStore('auth', {
           return Promise.resolve();
         } else {
           // 如果业务码不为0，或数据结构不正确，则抛出错误
-          throw new Error(responseData.message || '登录失败，请检查用户名和密码');
+          throw new Error(responseData.message || '登录失败，请检查邮箱和密码');
         }
       } catch (error) {
         // 5. 如果API调用失败，清空状态并向上抛出错误

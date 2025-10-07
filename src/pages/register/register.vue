@@ -17,11 +17,12 @@
           
           <view class="register-form">
             <BaseInput
-              v-model="username"
-              label="用户名"
-              placeholder="请输入您的账号"
-              :error="usernameError ? '账号不能为空' : usernameErrorMsg"
-              @input="onUsernameInput"
+              v-model="email"
+              label="邮箱"
+              placeholder="请输入您的邮箱"
+              type="email"
+              :error="emailErrorMsg"
+              @input="onEmailInput"
             />
             <BaseInput
               v-model="password"
@@ -64,32 +65,47 @@ import BaseInput from '@/components/BaseInput.vue';
 import BaseButton from '@/components/BaseButton.vue';
 import { registerApi } from '@/api.js';
 
-const username = ref('');
+const email = ref('');
 const password = ref('');
 const confirmPassword = ref('');
 const agree = ref(false);
 // 仅做错误变量声明和绑定，不实现判断逻辑
-const usernameError = ref(false);
+const emailError = ref(false);
 const passwordError = ref(false);
 const passwordLengthError = ref(false);
 const passwordComplexityError = ref(false);
 const confirmPasswordError = ref(false);
-const usernameErrorMsg = ref('');
+const emailErrorMsg = ref('');
 // 添加加载状态防止重复提交
 const isLoading = ref(false);
+
+function isValidEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
 
 function onRegister() {
   // 防止重复提交
   if (isLoading.value) return;
   
-  usernameError.value = !username.value.trim();
+  // 重置所有错误信息
+  emailErrorMsg.value = '';
   passwordError.value = !password.value.trim();
   passwordLengthError.value = false;
   passwordComplexityError.value = false;
   confirmPasswordError.value = false;
-  usernameErrorMsg.value = '';
+
+  // --- 新增的邮箱验证逻辑 ---
+  if (!email.value.trim()) {
+    emailErrorMsg.value = '邮箱不能为空';
+    return;
+  }
+  if (!isValidEmail(email.value)) {
+    emailErrorMsg.value = '请输入有效的邮箱格式';
+    return;
+  }
+  // -------------------------
   
-  if (usernameError.value) return;
   if (passwordError.value) return;
   if (password.value.length < 6 || password.value.length > 18) {
     passwordLengthError.value = true;
@@ -115,7 +131,7 @@ function onRegister() {
   
   // 注册接口调用
   registerApi({
-    username: username.value,
+    email: email.value,
     password: password.value,
     confirmPwd: confirmPassword.value
   })
@@ -127,7 +143,7 @@ function onRegister() {
         }, 800);
         // TODO: 注册成功后的后续逻辑
       } else {
-        usernameErrorMsg.value = data.message || '注册失败';
+        emailErrorMsg.value = data.message || '注册失败';
       }
     })
     .catch(() => {
@@ -139,9 +155,9 @@ function onRegister() {
     });
 }
 
-function onUsernameInput(e) {
-  if (e.detail && e.detail.value && usernameError.value) usernameError.value = false;
-  if (usernameErrorMsg.value) usernameErrorMsg.value = '';
+function onEmailInput() {
+  // 只要用户输入，就清空错误信息
+  if (emailErrorMsg.value) emailErrorMsg.value = '';
 }
 
 function onPasswordInput(e) {

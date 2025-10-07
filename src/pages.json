@@ -38,6 +38,18 @@
 			"style": {
 				"navigationBarTitleText": "我的余额"
 			}
+		},
+		{
+			"path": "pages/forgot-password/ForgotPassword",
+			"style": {
+				"navigationBarTitleText": "忘记密码"
+			}
+		},
+		{
+			"path": "pages/reset-password/ResetPassword",
+			"style": {
+				"navigationBarTitleText": "重置密码"
+			}
 		}
 	],
 	"globalStyle": {

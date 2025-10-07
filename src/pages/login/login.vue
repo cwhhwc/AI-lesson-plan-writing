@@ -18,17 +18,17 @@
           <LoginMethodTabs v-model:activeTab="activeTab" />
           <PasswordLoginForm
             v-if="activeTab === 'password'"
-            v-model:username="username"
+            v-model:email="email"
             v-model:password="password"
             v-model:rememberMe="rememberMe"
-            :usernameError="usernameError"
+            :emailError="emailError"
             :passwordError="passwordError"
-            :usernameErrorMsg="usernameErrorMsg"
+            :emailErrorMsg="emailErrorMsg"
             :isLoading="isLoading"
             @login="onLogin"
             @forgot-password="onForgot"
             @register="onRegister"
-            @username-input="onUsernameInput"
+            @email-input="onEmailInput"
             @password-input="onPasswordInput"
           />
           <view v-if="activeTab === 'phone'" class="phone-login-placeholder">
@@ -52,43 +52,43 @@ import LoginMethodTabs from './components/LoginMethodTabs.vue';
 
 const activeTab = ref('password');
 
-const username = ref('');
+const email = ref('');
 const password = ref('');
 const rememberMe = ref(false);
-const usernameError = ref(false);
+const emailError = ref(false);
 const passwordError = ref(false);
-const usernameErrorMsg = ref('');
+const emailErrorMsg = ref('');
 const isLoading = ref(false);
 
 const authStore = useAuthStore();
 
 async function onLogin() {
   if (isLoading.value) return;
-  usernameError.value = !username.value.trim();
+  emailError.value = !email.value.trim();
   passwordError.value = !password.value.trim();
-  usernameErrorMsg.value = '';
-  if (usernameError.value || passwordError.value) {
+  emailErrorMsg.value = '';
+  if (emailError.value || passwordError.value) {
     return;
   }
   isLoading.value = true;
   try {
     await authStore.login({
-      username: username.value,
+      email: email.value,
       password: password.value,
     });
     uni.showToast({ title: '登录成功', icon: 'success' });
     uni.reLaunch({ url: '/pages/chat/chat' });
   } catch (error) {
     console.error(error);
-    usernameErrorMsg.value = error.message || '登录失败，请重试';
+    emailErrorMsg.value = error.message || '登录失败，请重试';
   } finally {
     isLoading.value = false;
   }
 }
 
-function onUsernameInput() {
-  if (username.value.trim() && usernameError.value) usernameError.value = false;
-  if (usernameErrorMsg.value) usernameErrorMsg.value = '';
+function onEmailInput() {
+  if (email.value.trim() && emailError.value) emailError.value = false;
+  if (emailErrorMsg.value) emailErrorMsg.value = '';
 }
 
 function onPasswordInput() {
@@ -96,7 +96,7 @@ function onPasswordInput() {
 }
 
 function onForgot() {
-  uni.showToast({ title: '请联系管理员', icon: 'none' });
+  uni.navigateTo({ url: '/pages/forgot-password/ForgotPassword' });
 }
 
 function onRegister() {

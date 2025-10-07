@@ -3,19 +3,19 @@ import { API_CONFIG } from '@/config.js';
 
 // src/api.js
 // 1. 登录
-export function loginApi({ username, password, rememberMe }) {
+export function loginApi({ email, password, rememberMe }) {
   return request({
     url: API_CONFIG.ENDPOINTS.LOGIN,
-    data: { username, password, rememberMe },
+    data: { email, password, rememberMe },
     authType: 'cookie', // 使用 Cookie 认证
   });
 }
 
 // 2. 注册
-export function registerApi({ username, password, confirmPwd }) {
+export function registerApi({ email, password, confirmPwd }) {
   return request({
     url: API_CONFIG.ENDPOINTS.REGISTER,
-    data: { username, password, confirmPwd },
+    data: { email, password, confirmPwd },
     authType: 'none', // 注册不需要认证
   });
 }
@@ -111,4 +111,34 @@ export function logoutApi() {
  */
 export function triggerProactiveTokenRefresh() {
   return tryRefreshToken();
+}
+
+// 6. 发送验证码 (后端生成并存储，不发送邮件)
+export function sendVerificationCodeApi({ email }) {
+  return request({
+    url: API_CONFIG.ENDPOINTS.SEND_VERIFICATION_CODE,
+    method: 'POST', // 假设是 POST 请求
+    data: { email },
+    authType: 'none', // 发送验证码通常不需要认证
+  });
+}
+
+// 7. 验证验证码
+export function verifyVerificationCodeApi({ email, code }) {
+  return request({
+    url: API_CONFIG.ENDPOINTS.VERIFY_VERIFICATION_CODE,
+    method: 'POST', // 假设是 POST 请求
+    data: { email, code },
+    authType: 'none', // 验证验证码通常不需要认证
+  });
+}
+
+// 8. 忘记密码 - 更新密码
+export function resetPasswordApi({ email, newPassword }) {
+  return request({
+    url: API_CONFIG.ENDPOINTS.RESET_PASSWORD,
+    method: 'POST', // 假设是 POST 请求
+    data: { email, newPassword},
+    authType: 'none', // 忘记密码通常不需要认证
+  });
 }

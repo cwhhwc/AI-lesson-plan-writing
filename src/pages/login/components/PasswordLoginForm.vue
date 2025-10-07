@@ -1,12 +1,13 @@
 <template>
   <view class="login-form">
     <BaseInput
-      :modelValue="username"
-      @update:modelValue="emit('update:username', $event)"
-      label="账号"
-      placeholder="请输入账号"
-      :error="usernameError ? '账号不能为空' : usernameErrorMsg"
-      @input="onUsernameInputInternal"
+      :modelValue="email"
+      @update:modelValue="emit('update:email', $event)"
+      label="邮箱"
+      placeholder="请输入邮箱"
+      type="email"
+      :error="emailError ? '邮箱不能为空' : emailErrorMsg"
+      @input="onEmailInputInternal"
     >
       <template #icon>
         <view class="icon-common user-icon"></view>
@@ -43,27 +44,27 @@ import BaseInput from '@/components/BaseInput.vue';
 import BaseButton from '@/components/BaseButton.vue';
 
 const props = defineProps({
-  username: String,
+  email: String,
   password: String,
   rememberMe: Boolean,
-  usernameError: Boolean,
+  emailError: Boolean,
   passwordError: Boolean,
-  usernameErrorMsg: String,
+  emailErrorMsg: String,
   });
 
 const emit = defineEmits([
-  'update:username',
+  'update:email',
   'update:password',
   'update:rememberMe',
   'forgot-password',
   'register',
-  'username-input',
+  'email-input',
   'password-input',
 ]);
 
 // Internal input handlers to pass through to parent's validation
-function onUsernameInputInternal(e) {
-  emit('username-input', e);
+function onEmailInputInternal(e) {
+  emit('email-input', e);
 }
 
 function onPasswordInputInternal(e) {
