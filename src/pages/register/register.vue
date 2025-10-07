@@ -4,6 +4,7 @@
       <!-- 左侧宣传栏 -->
       <view class="showcase-section">
         <view class="showcase-content">
+          <image src="/static/mylogo.svg" class="showcase-logo" mode="aspectFit" />
           <view class="showcase-title">开启您的创作之旅</view>
           <view class="showcase-subtitle">加入折纸AI，体验专为教师设计的智能备课平台</view>
         </view>
@@ -12,7 +13,6 @@
       <!-- 右侧注册表单 -->
       <view class="form-section">
         <view class="form-content">
-          <image src="/static/logo.png" class="logo-image" mode="aspectFit" />
           <view class="login-title">创建新账户</view>
           
           <view class="register-form">
@@ -70,8 +70,6 @@ const email = ref('');
 const password = ref('');
 const confirmPassword = ref('');
 const agree = ref(false);
-// 仅做错误变量声明和绑定，不实现判断逻辑
-const emailError = ref(false);
 const passwordError = ref(false);
 const passwordLengthError = ref(false);
 const passwordComplexityError = ref(false);
@@ -80,7 +78,7 @@ const emailErrorMsg = ref('');
 // 添加加载状态防止重复提交
 const isLoading = ref(false);
 
-function onRegister() {
+async function onRegister() {
   // 防止重复提交
   if (isLoading.value) return;
   
@@ -121,32 +119,28 @@ function onRegister() {
     return;
   }
   
-  // 设置加载状态
   isLoading.value = true;
   
-  // 注册接口调用
-  registerApi({
-    email: email.value,
-    password: password.value,
-    confirmPwd: confirmPassword.value
-  })
-    .then(data => {
-      if (data.code === 0) {
-        uni.showToast({ title: '注册成功', icon: 'success' });
-        setTimeout(() => {
-          uni.navigateTo({ url: '/pages/login/login' });
-        }, 800);
-      } else {
-        emailErrorMsg.value = data.message || '注册失败';
-      }
-    })
-    .catch(() => {
-      uni.showToast({ title: '网络错误', icon: 'none' });
-    })
-    .finally(() => {
-      // 无论成功失败都要重置加载状态
-      isLoading.value = false;
+  try {
+    const data = await registerApi({
+      email: email.value,
+      password: password.value,
+      confirmPwd: confirmPassword.value
     });
+
+    if (data.code === 0) {
+      uni.showToast({ title: '注册成功', icon: 'success' });
+      setTimeout(() => {
+        uni.navigateTo({ url: '/pages/login/login' });
+      }, 800);
+    } else {
+      emailErrorMsg.value = data.message || '注册失败';
+    }
+  } catch (error) {
+    uni.showToast({ title: '网络错误', icon: 'none' });
+  } finally {
+    isLoading.value = false;
+  }
 }
 
 function onEmailInput() {

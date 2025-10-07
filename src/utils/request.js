@@ -43,13 +43,20 @@ const tryRefreshToken = async () => {
     const authStore = useAuthStore();
     authStore.logout(); // 刷新失败，清空状态
 
-    // 检查当前页面是否是登录页
-    const pages = getCurrentPages();
-    const isLoginPage = pages.length > 0 && pages[pages.length - 1].route === 'pages/login/login';
+    // 定义一个公共页面路径的白名单
+    const publicPages = [
+      'pages/login/login',
+      'pages/register/register',
+      'pages/forgot-password/ForgotPassword',
+      'pages/reset-password/ResetPassword'
+    ];
 
-    // 如果不在登录页，说明是会话过期，直接跳转
-    if (!isLoginPage) {
-      // 使用 reLaunch 跳转到登录页，清空页面栈
+    const pages = getCurrentPages();
+    // 检查当前页面是否在白名单中
+    const currentPageIsPublic = pages.length > 0 && publicPages.includes(pages[pages.length - 1].route);
+
+    // 如果当前页面不在公共页面白名单内，才跳转到登录页
+    if (!currentPageIsPublic) {
       uni.reLaunch({
         url: '/pages/login/login'
       });
