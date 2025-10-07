@@ -102,7 +102,7 @@ async function handleH5Request(fullUrl, method, headers, data, onMessage, isDown
   const res = await fetch(fullUrl, {
     method,
     headers,
-    credentials, // 取消硬编码为 'include'，根据需要传入
+    credentials,
     body: data ? JSON.stringify(data) : null,
   });
 
