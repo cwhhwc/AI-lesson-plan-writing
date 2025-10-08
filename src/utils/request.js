@@ -283,7 +283,8 @@ export async function request(options) {
   //   throw new Error(response.data.message || 'Business Error');
   // }
   console.log('请求响应:（request）', response);
-  return response.data || response; // 返回数据部分，或整个响应（如下载）
+  // 如果是下载请求，返回完整的响应对象，否则只返回数据部分
+  return options.isDownload ? response : (response.data || response);
 }
 
 //单独导出刷新token函数，供外部调用
