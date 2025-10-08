@@ -85,8 +85,37 @@ VITE_APP_API_BASE_URL = https://your-express-backend.com
 ```
 
 后端
-```.env
+## 🔐 后端安全与服务配置
 
+本项目后端使用 `.env` 文件管理敏感信息与服务配置，确保代码安全性与环境可移植性。
+
+### JWT 安全策略
+| 配置项 | 值 | 说明 |
+|-------|-----|------|
+| `ACCESS_TOKEN_SECRET` | 随机长字符串 | 用于签发和验证 JWT |
+| `ACCESS_TOKEN_EXPIRATION` | `15m` | 15分钟过期，降低泄露风险 |
+| `REFRESH_TOKEN_SECRET` | 独立密钥 | 与 Access Token 使用不同密钥 |
+| `REFRESH_TOKEN_EXPIRATION` | `7d` | 7天有效，支持自动续期 |
+| `REFRESH_TOKEN_COOKIE_MAX_AGE` | `604800000` | 7天（毫秒），设置 Cookie 过期时间 |
+
+> ✅ 双密钥设计 + HttpOnly Cookie，提升会话安全性
+
+### AI 服务配置
+| 配置项 | 说明 |
+|-------|------|
+| `DASHSCOPE_API_KEY` | 通义千问 API 密钥，仅在后端使用 |
+| `DASHSCOPE_APP_ID` | 模型应用 ID，用于指定调用模型 |
+
+> 🔒 所有 AI 请求由后端代理转发，前端不暴露任何密钥
+
+### 数据库与网络
+| 配置项 | 说明 |
+|-------|------|
+| `CONNECTION_STRING` | PostgreSQL 数据库连接地址，包含认证信息 |
+| `PORT` | 服务监听端口 |
+| `CORS_ORIGIN` | 白名单域名，仅允许指定前端访问，防止 XSS 攻击 |
+
+> 🌐 支持跨域安全通信，适用于前后端分离部署
 ### 4. 启动开发服务器
 ```bash
 npm run dev:h5
