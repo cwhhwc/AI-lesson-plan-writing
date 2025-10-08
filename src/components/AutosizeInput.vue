@@ -50,16 +50,13 @@ defineExpose({
     }
 
     // 这个组件实例的 $el 属性，指向的是 <uni-input> 这个自定义组件的根元素 (外层包装器)。
-    // 这与我们在 keydown 事件中观察到的 event.instance.$el 行为一致。
     const wrapperElement = inputProxy.$el;
     if (!wrapperElement) {
       return;
     }
 
-    // 因此，我们需要像之前一样，在包装器内部通过 querySelector 找到最终的、原生的 <input> 元素。
+    //在包装器内部通过 querySelector 找到原生 <input> 元素。
     const realInputElement = wrapperElement.querySelector('input');
-    
-    // 在这个真正的 <input> 元素上调用 focus() 方法，使其获得焦点。
     realInputElement?.focus();
   }
 });
@@ -70,7 +67,6 @@ const handleKeydown = (event) => {
   const key = event.key;
 
   // `event.instance.$el` 是 uni-app 的 <uni-input> 自定义组件的根元素，
-  // 它是一个包装器，而不是真正的 <input> 标签。
   const wrapperElement = event.instance?.$el;
 
   // 如果包装器元素不存在，则直接返回。
@@ -98,12 +94,10 @@ const handleKeydown = (event) => {
     return;
   }
 
-  // 条件判断：右箭头 + 光标在末尾
+  // 按键判断：
   if (key === 'ArrowRight' && selectionStart === valueLength) {
     emit('focus-next');
   }
-
-  // 条件判断：左箭头 + 光标在开头
   if (key === 'ArrowLeft' && selectionStart === 0) {
     emit('focus-prev');
   }

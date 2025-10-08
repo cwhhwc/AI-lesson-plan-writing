@@ -31,7 +31,7 @@ import { ref, onMounted, watch, onUnmounted } from 'vue';
 import ChatBubble from '@/components/ChatBubble.vue';
 import NewChatButton from '@/components/NewChatButton.vue';
 
-// 定义props
+//props定义，接收消息数组和滚动触发器
 const props = defineProps({
   messages: {
     type: Array,
@@ -96,7 +96,6 @@ onMounted(() => {
     scrollableElement = messagesContainer.value.$el.querySelector('.messages-content');
   }
   
-  console.log('找到的滚动元素 scrollableElement:', scrollableElement);
 
   if (scrollableElement) {
     scrollableElement.addEventListener('scroll', checkScrollPosition);
@@ -114,11 +113,6 @@ onUnmounted(() => {
     scrollableElement.removeEventListener('scroll', checkScrollPosition);
   }
 });
-
-// scrollToBottom 已变为内部方法，由 scrollTrigger prop 触发，不再需要暴露给父组件
-// defineExpose({
-//   scrollToBottom
-// });
 
 // --- 其他业务逻辑 ---
 
@@ -156,8 +150,6 @@ const handleNewChat = () => {
   flex: 1; /* 当内容不足时，占位符会撑开空间，推送按钮到底部 */
   min-height: 0; /* 当内容超出时，占位符会缩小到0 */
 }
-
-/* .messages-list 使用默认块级布局，消息正常堆叠 */
 
 .messages-list {
   max-width: 100vw;

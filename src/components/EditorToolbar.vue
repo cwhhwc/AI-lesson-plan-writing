@@ -59,7 +59,7 @@ function emitCommand(name, value) {
   border: 1px solid #e5e7eb;
   border-radius: 9999px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.03);
-  /* 新增：实现吸顶效果 */
+  /* 实现吸顶效果 */
   position: sticky;
   top: 10px; /* 距离顶部10px */
   z-index: 99;
@@ -92,7 +92,6 @@ function emitCommand(name, value) {
   background-color: #f3f4f6;
 }
 
-/* 新增样式 */
 .format-button-container {
   position: relative; /* 作为浮动面板的定位锚点 */
 }

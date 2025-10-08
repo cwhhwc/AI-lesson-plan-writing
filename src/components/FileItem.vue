@@ -128,28 +128,9 @@ const handleInputBlur = () => {
 
 // --- 其他操作处理 ---
 const handleShare = () => {
-  emit('share-item', props.item);
-  // 请在下方的 '' 中替换为你自己的线上域名或本地开发服务器地址
-  const shareUrl = `http://localhost:5173/#/pages/share/share?id=${props.item.id}`;
-
-  uni.shareWithSystem({
-    summary: `快来看看我分享的文档：${props.item.name}`,
-    href: shareUrl,
-    success: () => {
-      // 分享成功的回调
-    },
-    fail: () => {
-      // 分享失败的降级处理：复制链接到剪贴板
-      uni.setClipboardData({
-        data: shareUrl,
-        success: () => {
-          uni.showToast({
-            title: '分享调用失败，链接已复制',
-            icon: 'none'
-          });
-        }
-      });
-    }
+  uni.showToast({
+    title: '分享功能触发',
+    icon: 'none'
   });
 };
 
@@ -158,7 +139,6 @@ const handleDelete = () => {
 };
 
 const handleConfirmDelete = () => {
-  // 这里也可以调用 store action
   fileStore.deleteFile(props.item.id);
   isDeleting.value = false;
 };

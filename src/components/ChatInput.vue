@@ -29,7 +29,7 @@
 import { ref } from 'vue';
 import SendButton from './SendButton.vue';
 
-// 定义props
+
 const props = defineProps({
   isSending: {
     type: Boolean,
@@ -37,7 +37,7 @@ const props = defineProps({
   }
 });
 
-// 定义emit事件
+
 const emit = defineEmits(['send-message', 'toggle-options-panel']);
 
 // 本地状态

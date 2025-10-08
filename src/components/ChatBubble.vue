@@ -21,7 +21,6 @@
 
 <script setup>
 import { computed } from 'vue';
-// 引入渲染和子组件
 import LessonPlanLoading from '@/components/LessonPlanLoading.vue';
 import { renderMarkdown } from '@/utils/renderMarkdown.js';
 
@@ -72,12 +71,12 @@ const bubbleClass = computed(() => {
   line-height: 1.5;
 }
 
-/* 新增：思考中提示的样式 */
+/*思考中提示的样式 */
 .thinking-indicator {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 45rpx; /* 与文本行高大致匹配 */
+  height: 45rpx;
 }
 
 .dot-flashing {
